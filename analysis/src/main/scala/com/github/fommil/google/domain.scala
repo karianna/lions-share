@@ -21,9 +21,10 @@ object RoleHeader {
 
 sealed trait Cell
 case class DataCell(v: BigDecimal, f: Option[String] = None) extends Cell
-case class LabelCell(v: String) extends Cell
-object LabelCell extends (String => LabelCell) {
-  val NullCell = LabelCell(null)
+case class LabelCell(v: Option[String]) extends Cell
+object LabelCell extends (Option[String] => LabelCell) {
+  val NullCell = LabelCell(None)
+  def apply(label: String): LabelCell = LabelCell(Some(label))
 }
 object TimeCell {
   def apply(t: Timestamp) = DataCell(BigDecimal(t.instant))

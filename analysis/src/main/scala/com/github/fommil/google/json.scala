@@ -2,12 +2,16 @@ package com.github.fommil.google
 
 import spray.json._
 
-trait DataTableMarshalling extends DefaultJsonProtocol {
-
+trait DataTableMarshalling {
+  import DefaultJsonProtocol._
   implicit val DataCellFormat = jsonFormat2(DataCell)
-  implicit val LabelCellFormat = jsonFormat1(LabelCell)
 
-  implicit object CellFormat extends JsonFormat[Cell] {
+  private object Special extends DefaultJsonProtocol with NullOptions {
+    val LabelCellFormatWithNulls = jsonFormat1(LabelCell)
+  }
+  implicit val LabelCellFormat = Special.LabelCellFormatWithNulls
+
+  implicit object CellFormat extends RootJsonFormat[Cell] {
     override def read(json: JsValue): Cell = json match {
       case JsObject(f) => f("v") match {
         case s: JsString => LabelCellFormat.read(json)
@@ -26,3 +30,5 @@ trait DataTableMarshalling extends DefaultJsonProtocol {
   implicit val RowFormat = jsonFormat1(Row)
   implicit val DataTableFormat = jsonFormat2(DataTable)
 }
+
+object DataTableMarshalling extends DataTableMarshalling

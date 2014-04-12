@@ -23,8 +23,6 @@ import FiniteDuration.FiniteDurationIsOrdered
   * millisecond dates into `Date` format (this is not possible via JSON).
   */
 class GcAnalyser {
-  type GcEvents = Seq[GcEvent]
-
   protected case class HeapInstant(timestamp: Timestamp, used: Long, collected: Long) extends Ordered[HeapInstant] {
     override def compare(that: HeapInstant): Int = timestamp compare that.timestamp
   }
@@ -172,11 +170,11 @@ class GcAnalyser {
     * This format is appropriate for use in a Google Chart Scatter.
     */
   def pauses(events: GcEvents): DataTable = {
-    val headers = List("DateTime", "Concurrent Duration", "Blocked Duration").map { DataHeader(_) }
+    val headers = List("DateTime", "NewGen", "Full GC").map { DataHeader(_) }
     val body = events.collect {
-      case GcCollection(_, interval@TimeInterval(from, _), _, _, _, true) =>
-        Row(List(TimeCell(from), DataCell(interval.duration.toMillis), NullCell))
       case GcCollection(_, interval@TimeInterval(from, _), _, _, _, false) =>
+        Row(List(TimeCell(from), DataCell(interval.duration.toMillis), NullCell))
+      case GcCollection(_, interval@TimeInterval(from, _), _, _, _, true) =>
         Row(List(TimeCell(from), NullCell, DataCell(interval.duration.toMillis)))
     }
     DataTable(headers, body)
@@ -239,6 +237,9 @@ class GcAnalyser {
     }.toList
     DataTable(headers, body)
   }
+
+  // do a specialist one
+  def profile(events: GcEvents) = averageProfile(Seq(events))
 
   /** A stacked interval time-series of heap usage before and after GC (with quantiles).
     * Table takes the form (O = Old Gen, N = New Gen + Old Gen):
