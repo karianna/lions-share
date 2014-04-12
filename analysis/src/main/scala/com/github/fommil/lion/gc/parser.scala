@@ -6,7 +6,7 @@ import scala.concurrent.duration._
 import scala.util.{Success, Failure, Try}
 import akka.event.slf4j.SLF4JLogging
 import org.parboiled.scala._
-import com.github.fommil.utils.WhitespaceAwareParser
+import com.github.fommil.utils.{TimeInterval, Timestamp, WhitespaceAwareParser}
 
 object GcParser {
   def parse(source: String) = parser.parseGcLog(source)

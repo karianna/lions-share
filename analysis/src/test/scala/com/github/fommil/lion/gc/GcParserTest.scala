@@ -3,7 +3,7 @@ package com.github.fommil.lion.gc
 import org.scalatest.FunSuite
 import GcParser.{parse, parseAtom}
 import MemoryRegion._
-import com.github.fommil.utils.GzResourceSupport
+import com.github.fommil.utils.{TimeInterval, Timestamp, GzResourceSupport}
 
 class GcParserTest extends FunSuite with GzResourceSupport {
 

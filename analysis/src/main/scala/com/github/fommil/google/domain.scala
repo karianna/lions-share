@@ -2,6 +2,7 @@ package com.github.fommil.google
 
 import scala.collection.immutable.ListSet
 import LabelCell.NullCell
+import com.github.fommil.utils.Timestamp
 
 case class Header(label: Option[String],
                   `type`: String,
@@ -23,6 +24,9 @@ case class DataCell(v: BigDecimal, f: Option[String] = None) extends Cell
 case class LabelCell(v: String) extends Cell
 object LabelCell extends (String => LabelCell) {
   val NullCell = LabelCell(null)
+}
+object TimeCell {
+  def apply(t: Timestamp) = DataCell(BigDecimal(t.instant))
 }
 
 case class Row(c: Seq[Cell]) {

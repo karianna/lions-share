@@ -1,31 +1,6 @@
 package com.github.fommil.lion.gc
 
-import scala.concurrent.duration.{Duration, DurationLong}
-import java.text.{SimpleDateFormat, DateFormat}
-
-// there is no de-facto standard case class for moments in time
-case class Timestamp(instant: Long) extends Ordered[Timestamp] {
-  def +(d: Duration) = Timestamp(instant + d.toMillis)
-  def -(d: Duration) = Timestamp(instant - d.toMillis)
-  def +(that: Timestamp) = Timestamp(instant + that.instant)
-  def -(that: Timestamp) = Timestamp(instant - that.instant)
-  override def compare(that: Timestamp) = instant compare that.instant
-}
-object Timestamp extends (Long => Timestamp) {
-  private val parser = new ThreadLocal[DateFormat] {
-    override def initialValue() = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZZ")
-  }
-
-  def parse(iso: String): Timestamp = Timestamp(parser.get.parse(iso).getTime)
-}
-
-case class TimeInterval(from: Timestamp, to: Timestamp) extends Ordered[TimeInterval] {
-  def duration: Duration = (to - from).instant.millis
-  override def compare(that: TimeInterval) = (from, to) compare(that.from, that.to)
-}
-object TimeInterval extends ((Timestamp, Timestamp) => TimeInterval) {
-  def apply(from: Long, to: Long): TimeInterval = TimeInterval(Timestamp(from), Timestamp(to))
-}
+import com.github.fommil.utils.TimeInterval
 
 trait GcEvent extends Ordered[GcEvent] {
   def groupId: Long
