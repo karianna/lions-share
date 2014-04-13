@@ -7,13 +7,18 @@ object LionBuild extends FommilBuild with Dependencies {
   override def projectOrg = "com.github.fommil.lion"
   override def projectVersion = "1.0-SNAPSHOT"
 
-  lazy val agent = module("agent") settings (autoScalaLibrary := false, ideaIncludeScalaFacet := false)
+  lazy val agent = module("agent") settings (
+    autoScalaLibrary := false, ideaIncludeScalaFacet := false,
+    javacOptions in doc := Seq("-source", "1.6"))
 
   lazy val analysis = module("analysis") dependsOn (agent) settings (
-    libraryDependencies ++= sprayjson :: commonsMaths :: akka :: logback :: scalatest)
+    libraryDependencies ++= sprayjson :: commonsMaths :: akka :: logback :: scalatest :: Nil)
 
-  def modules = List(agent, top)
-  def top = analysis
+  lazy val sbt = module("sbt") dependsOn (analysis) settings (
+    sbtPlugin := true)
+
+  def modules = List(agent, analysis, sbt)
+  def top = sbt
 }
 
 trait Dependencies {
@@ -23,10 +28,9 @@ trait Dependencies {
     ExclusionRule(organization = "org.slf4j")
   )
 
-  val scalatest = List(
-    "org.scalatest" %% "scalatest" % "2.1.3" % "test",
-    "org.scala-lang.modules" %% "scala-xml" % "1.0.1" % "test"
-  )
+  val scalatest = "org.scalatest" %% "scalatest" % "2.1.3" % "test"
+// needed when we got to scala 2.11
+//  val scalaxml = "org.scala-lang.modules" %% "scala-xml" % "1.0.1"
 
   val sprayjson = "io.spray" %% "spray-json" % "1.2.6"
   val akka = "com.typesafe.akka" %% "akka-slf4j" % "2.3.0" excludeAll (bad: _*)
@@ -40,7 +44,7 @@ trait FommilBuild extends Build {
 
   def projectVersion = "1.0-SNAPSHOT"
   def projectOrg = "com.github.fommil"
-  def projectScala = "2.11.0-RC4"
+  def projectScala = "2.10.4"
   def modules: List[ProjectReference]
   def top: ProjectReference
 
@@ -55,7 +59,8 @@ trait FommilBuild extends Build {
     scalacOptions in Compile ++= Seq(
       "-encoding", "UTF-8", "-target:jvm-1.6", "-Xfatal-warnings",
       "-language:postfixOps", "-language:implicitConversions"),
-    javacOptions in Compile ++= Seq("-source", "1.6", "-target", "1.6", "-Xlint:all", "-Xlint:-options", "-Werror"),
+    javacOptions in (Compile, compile) ++= Seq("-source", "1.6", "-target", "1.6", "-Xlint:all", "-Xlint:-options", "-Werror"),
+    javacOptions in (Compile, compile) ++= Seq("-source", "1.6"),
     outputStrategy := Some(StdoutOutput),
     fork := true,
     maxErrors := 1,

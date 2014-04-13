@@ -29,7 +29,8 @@ object Timestamp extends (Long => Timestamp) {
 // [from, to) (contains 'to' iff from == to)
 case class TimeInterval(from: Timestamp, to: Timestamp) extends Ordered[TimeInterval] {
   require(to >= from)
-  override def compare(that: TimeInterval) = (from, to) compare(that.from, that.to)
+  override def compare(that: TimeInterval) =
+    implicitly[Ordering[(Timestamp, Timestamp)]].compare((from, to), (that.from, that.to))
   def duration: Duration = (to - from).instant.millis
   def mid: Timestamp = Timestamp(from.instant / 2 + to.instant / 2)
   def contains(t: Timestamp) = t == from || (t >= from && t < to)
