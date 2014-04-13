@@ -8,8 +8,8 @@ object LionBuild extends FommilBuild with Dependencies {
   override def projectVersion = "1.0-SNAPSHOT"
 
   lazy val agent = module("agent") settings (
-    autoScalaLibrary := false, ideaIncludeScalaFacet := false,
-    javacOptions in doc := Seq("-source", "1.6"))
+    // all this for a pure java module...
+    autoScalaLibrary := false, ideaIncludeScalaFacet := false, crossPaths := false)
 
   lazy val analysis = module("analysis") dependsOn (agent) settings (
     libraryDependencies ++= sprayjson :: commonsMaths :: akka :: logback :: scalatest :: Nil)
@@ -60,7 +60,7 @@ trait FommilBuild extends Build {
       "-encoding", "UTF-8", "-target:jvm-1.6", "-Xfatal-warnings",
       "-language:postfixOps", "-language:implicitConversions"),
     javacOptions in (Compile, compile) ++= Seq("-source", "1.6", "-target", "1.6", "-Xlint:all", "-Xlint:-options", "-Werror"),
-    javacOptions in (Compile, compile) ++= Seq("-source", "1.6"),
+    javacOptions in (doc) ++= Seq("-source", "1.6"),
     outputStrategy := Some(StdoutOutput),
     fork := true,
     maxErrors := 1,
