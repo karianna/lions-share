@@ -2,6 +2,7 @@ package com.github.fommil.lion.gc
 
 import com.github.fommil.utils.{PimpedAny, TimeInterval, TimeIntervalRange, Timestamp}
 import com.github.fommil.google._
+import com.github.fommil.utils.PimpedAsMultimap._
 
 import scala.concurrent.duration
 import duration._
@@ -23,31 +24,8 @@ import FiniteDuration.FiniteDurationIsOrdered
   * millisecond dates into `Date` format (this is not possible via JSON).
   */
 class GcAnalyser {
-  protected case class HeapInstant(timestamp: Timestamp, used: Long, collected: Long) extends Ordered[HeapInstant] {
+  private case class HeapInstant(timestamp: Timestamp, used: Long, collected: Long) extends Ordered[HeapInstant] {
     override def compare(that: HeapInstant): Int = timestamp compare that.timestamp
-  }
-
-  /** A time-series of memory allocations, timestamps are accurate only to
-    * the nearest subsequent garbage collection. Table takes the form:
-    * ```
-    * DateTime    | Allocated
-    * -----------------------
-    * (UNIX time) | (Bytes)
-    * ...
-    * ```
-    * suitable for a Google Charts Scatter.
-    */
-  def allocations(events: GcEvents): DataTable = {
-    val raw = allocationsRaw(events)
-    val base = events.min.interval.from
-    val baselined = raw.map { case (time, v) => ((time.instant - base.instant).millis, v) }
-    val binned = timeseriesBins(baselined, 10 seconds, base)
-
-    val headers = DataHeader("Timestamp") :: DataHeader("Allocated") :: Nil
-    val body = binned.map { case (interval, allocated) =>
-      Row(TimeCell(interval.to) :: DataCell(allocated) :: Nil)
-    }
-    DataTable(headers, body)
   }
 
   /** A time-series of allocation rates averaged over several processes.
@@ -66,7 +44,7 @@ class GcAnalyser {
   // takes a list of discrete timeseries datums and bins them by the step size,
   // returning the intervals and the frequencies of the data (if normalised) or
   // the averages
-  protected def timeseriesBins(allocations: Seq[(Duration, Double)],
+  private def timeseriesBins(allocations: Seq[(Duration, Double)],
                                step: FiniteDuration,
                                start: Timestamp = Timestamp(0),
                                normalise: Boolean = true) = {
@@ -94,7 +72,7 @@ class GcAnalyser {
   // takes multiple streams of timeseries Long data, bins each stream
   // and produces Google Chart data for inclusion in an Intervals chart using the given
   // function for computing the intervals)
-  protected def timeseriesQuantiles(data: Seq[Seq[(Duration, Double)]],
+  private def timeseriesQuantiles(data: Seq[Seq[(Duration, Double)]],
                                     label: String = "Median",
                                     iLabels: List[String] = List.fill(4)("i0"),
                                     percentiles: List[Double] = List(Double.MinPositiveValue, 20, 80, 100),
@@ -103,8 +81,7 @@ class GcAnalyser {
       iLabels.map(i => RoleHeader("interval", `type` = "number", id = Some(i)))
 
     val body = data.flatMap { raw => timeseriesBins(raw, 10 seconds, normalise = normalise) }.
-      groupBy(_._1).map(kv => (kv._1, kv._2.map(_._2))).toList.sortBy(_._1). // poor man's TreeMultiMap
-      flatMap {
+      toSortedMultiMap.flatMap {
       case (interval, rates) if rates.isEmpty => None
       case (interval, rates) =>
         val p = new Percentile withEffect { _.setData(rates.toArray) }
@@ -113,12 +90,12 @@ class GcAnalyser {
     DataTable(headers, body)
   }
 
-  protected def baseline[T](processes: Seq[Seq[(Timestamp, T)]]) = processes.map { data =>
+  private def baseline[T](processes: Seq[Seq[(Timestamp, T)]]) = processes.map { data =>
     val base = data.unzip._1.min.instant
     data.map { case (time, value) => ((time.instant - base).millis, value) }
   }
 
-  protected def allocationsRaw(events: GcEvents) = {
+  private def allocationsRaw(events: GcEvents) = {
     // anything part of a GC collection will be atomic and share the same timestamps
     val loggedInstants = events.collect {
       case GcCollection(_, TimeInterval(from, to), _, before, after, _) =>
@@ -158,28 +135,6 @@ class GcAnalyser {
     }.toList
   }
 
-
-  /** A time-series of garbage collection pause times by concurrent
-    * and "stop the world" category. Table takes the form:
-    * ```
-    * DateTime     | Pauses
-    * --------------------------
-    * (UNIX time)  | (Seconds)
-    * ...
-    * ```
-    * This format is appropriate for use in a Google Chart Scatter.
-    */
-  def pauses(events: GcEvents): DataTable = {
-    val headers = List("DateTime", "NewGen", "Full GC").map { DataHeader(_) }
-    val body = events.collect {
-      case GcCollection(_, interval@TimeInterval(from, _), _, _, _, false) =>
-        Row(List(TimeCell(from), DataCell(interval.duration.toMillis), NullCell))
-      case GcCollection(_, interval@TimeInterval(from, _), _, _, _, true) =>
-        Row(List(TimeCell(from), NullCell, DataCell(interval.duration.toMillis)))
-    }
-    DataTable(headers, body)
-  }
-
   /** A time-series of garbage collection pause times by concurrent
     * and "stop the world" category. Table takes the form:
     * ```
@@ -209,8 +164,11 @@ class GcAnalyser {
       iLabels = List("i1", "i1"),
       percentiles = List(Double.MinPositiveValue, 100))
 
-    fast.join(slow, strict = false).dropColumn("Full").ascending("Seconds")
+    fast.join(slow, strict = false).ascending("Seconds")
   }
+
+  def throughput(processes: Seq[GcEvents]): DataTable =
+    throughput(processes.zipWithIndex.map{case (k,v) => (v.toString, k)}.toMap)
 
   /** Histogram data of throughput (percentage time not in GC)
     * ```
@@ -223,17 +181,17 @@ class GcAnalyser {
     * for the memory regions and lines for the before/after limits.
     *
     */
-  def throughput(processes: Map[String, GcEvents], title: String = "Throughput"): DataTable = {
+  def throughput(processes: Map[String, GcEvents]): DataTable = {
     def uptime(events: GcEvents) = (events.max.interval.to.instant - events.min.interval.from.instant) / 1000.0
     def collecting(events: GcEvents) = events.collect { case c: GcCollection =>
       (c.groupId, c.interval.duration)
     }.toMap.values.reduceOption[Duration](_ + _).getOrElse(Duration.Zero).toUnit(TimeUnit.SECONDS)
 
-    val headers = DataHeader("ID") :: DataHeader(title) :: Nil
+    val headers = DataHeader("Throughput") :: Nil
     val body = processes.map { case (id, events) =>
       val up = uptime(events)
       val gc = collecting(events)
-      Row(LabelCell(id) :: DataCell(100 * (up - gc) / up) :: Nil)
+      Row(DataCell(100 * (up - gc) / up, Some(id)) :: Nil)
     }.toList
     DataTable(headers, body)
   }

@@ -106,9 +106,10 @@
                 interval: {
                     // ideally we'd do a scatter plot of the full GCs, but Google Charts doesn't support area
                     // with scatter so we make it look like a scatter plot by drawing the error bar limits as points.
-                    i1: { color: 'red', 'style': 'bars', lineWidth: 0, barWidth: 0, pointSize: 10, fillOpacity: 1},
+                    i1: { color: 'red', 'style': 'bars', lineWidth: 0, barWidth: 10, pointSize: 10, fillOpacity: 1},
                     i0: { style: 'area'}
-                }
+                },
+                curveType: 'function'
             };
             new google.visualization.LineChart(el).draw(table, options);
         }
@@ -118,8 +119,7 @@
             var options = {
                 hAxis: {title: 'Throughput (%)'},
                 legend: {position: 'top'},
-                bar: {groupWidth: '80%'},
-                colors: ['#98b2e5', '#3366cc']
+                bar: {groupWidth: '80%'}
             };
             new google.visualization.Histogram(el).draw(table, options);
         }
@@ -134,11 +134,11 @@
                 chartArea: {top: 100, left: 100, right: 0, height: 400},
                 interval: {
                     oa1: { color: 'red', style: 'area'},
-                    oa2: { color: 'pink', style: 'sticks'},
+                    oa2: { color: 'pink', style: 'sticks', pointSize: 0},
                     na1: { color: '#3366cc', style: 'area'},
-                    na2: { color: '#3366cc', style: 'sticks'},
+                    na2: { color: '#3366cc', style: 'sticks', pointSize: 0},
                     nb1: { color: '#98b2e5', style: 'area'},
-                    nb2: { color: '#98b2e5', style: 'sticks'}
+                    nb2: { color: '#98b2e5', style: 'sticks', pointSize: 0}
                 },
                 colors: ['red', '#98b2e5', '#3366cc']
             };

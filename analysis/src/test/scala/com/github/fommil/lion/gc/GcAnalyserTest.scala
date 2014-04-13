@@ -13,7 +13,6 @@ class GcAnalyserTest extends FunSuite with GzResourceSupport {
 
   test("pauses") {
     analyzer.averagePauses(events :: Nil)
-    analyzer.pauses(events)
   }
 
   test("throughput") {
@@ -21,7 +20,6 @@ class GcAnalyserTest extends FunSuite with GzResourceSupport {
   }
 
   test("allocations") {
-    analyzer.allocations(events take 100)
     analyzer.averageAllocations(events :: Nil)
   }
 
