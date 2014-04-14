@@ -2,50 +2,44 @@ import sbt._
 import sbt.ForkOptions
 import sbt.Keys._
 import sbt.Attributed.data
-import complete.DefaultParsers._
-import io.Source
 
 import com.github.fommil
+import fommil.lion.gc.{GcReporter, GcParser}
+import com.github.fommil.utils.{StringResourceSupport, StringFileSupport, StringGzResourceSupport}
 import fommil.utils.PimpedAny._
-import com.github.fommil.lion.gc.{GcReporter, GcParser}
 
-object LionPlugin extends Plugin {
+object LionPlugin extends Plugin with StringGzResourceSupport with StringResourceSupport with StringFileSupport {
 
   val lion = TaskKey[Unit]("lion", "Run a main class with lions-share profiling.")
+  val lionRuns = SettingKey[Int]("number of times to run the main class during lions-share profiling.")
+  val lionClass = SettingKey[Option[String]]("main class to run during lions-share profiling.")
+  val lionOut = SettingKey[File]("output directory for lions-share reports and log files.")
 
   // https://github.com/sbt/sbt/issues/1260
   private val agent = "com.github.fommil.lion" % "agent" % "1.0-SNAPSHOT"
 
-//  private val parser = IntBasic.examples("<arg>")
-
   override val projectSettings = Seq(
     libraryDependencies += agent,
-    // TODO: plugin settings for repeats and so on
-    lion := //Def.inputTask {
-      //        val args = parser.parsed
-      //        println("parsed " + args)
-      // TODO: take arguments and parse them
-      //    val ArgsRegex = """(\d+)\s*(\S+)""".r
-      //    val (runs, tracers) = args match {
-      //      case ArgsRegex(r, t) => (r.toInt, t.split(",").toList)
-      //      case ArgsRegex(r) => (r.toInt, Nil)
-      //      case _ => (10, Nil)
-      //    }
-      //    require(runs > 0, "first parameter must be >= 0")
-      runLion(
-        (fullClasspath in Runtime).value,
-        (mainClass in Runtime).value,
-        (streams in Runtime).value,
-        (update in Runtime).value
-      )
-    //      }
+    lionRuns := 10,
+    lionClass := None,
+    lionOut := new File("lion-results"),
+    // TODO: take user input for allocation sourcing
+    lion := runLion(
+      (fullClasspath in Runtime).value,
+      (lionClass in Runtime).value orElse
+        (mainClass in Runtime).value orElse
+        (discoveredMainClasses in Runtime).value.headOption,
+      (streams in Runtime).value,
+      (update in Runtime).value,
+      (lionRuns in lion).value,
+      (lionOut in lion).value
+    )
   )
 
   def agentJar(update: UpdateReport): File = {
     for {
       report <- update.configuration("runtime-internal").get.modules
       module = report.module
-      // == on agent doesn't seem to work
       if module.organization == agent.organization
       if module.name == agent.name
       if module.revision == agent.revision
@@ -57,19 +51,21 @@ object LionPlugin extends Plugin {
   def runLion(cp: Classpath,
               main: Option[String],
               streams: TaskStreams,
-              update: UpdateReport): Unit = {
-    val jar = agentJar(update)
-
+              update: UpdateReport,
+              runs: Int,
+              out: File): Unit = {
     val log = streams.log
+    if (main.isEmpty) {
+      log.warn("lionClass (or mainClass) must be set")
+      return
+    }
 
-    // TODO: when None, prompt user
-    val m = main.getOrElse("Scratch") // HACK
+    log.info(s"running the lions-share $runs times for ${main.get}")
+    out.mkdirs()
 
-    val runs = 10
-    log.info(s"running the lions-share $runs times for $m")
-
+    val jar = agentJar(update)
     val processes = (1 to runs) map { run =>
-      val gcLog = new File(s"gc-$run.log")
+      val gcLog = new File(out, s"gc-$run.log")
       val javaOptions = Seq(
         s"-Xloggc:${gcLog.getAbsolutePath }",
         "-XX:+PrintGCDetails", "-XX:+PrintGCDateStamps", "-XX:+PrintTenuringDistribution", "-XX:+PrintHeapAtGC",
@@ -79,21 +75,20 @@ object LionPlugin extends Plugin {
       val runner = new ForkRun(ForkOptions(runJVMOptions = javaOptions))
       // NOTE: constraint is that the user cannot pass extra args
       // maybe we use settings to entirely define the run
-      toError(runner.run(m, data(cp), Nil, log))
+      toError(runner.run(main.get, data(cp), Nil, log))
 
-      val gcLogContents = {
-        val source = Source.fromFile(gcLog)
-        try source.getLines().mkString("\n")
-        finally source.close()
-        //        gcLog.delete()
-      }
+      val gcLogContents = fromFile(gcLog)
       GcParser.parse(gcLogContents) withEffect { events =>
         log.info(s"parsed ${events.size } garbage collection events")
       }
     }
-    GcReporter.gcReport(processes, new File("data.js"))
+    GcReporter.gcReport(processes, new File(out, "data.js"))
 
-    // IMPL: post-process and produce the report
+    val html = fromRes("/com/github/fommil/lion/gc/report.html")
+    val report = new File(out, "index.html")
+
+    toFile(report, html)
+    log.info(s"lions-share report is available at ${report.getAbsolutePath}")
   }
 
 }

@@ -3,9 +3,9 @@ package com.github.fommil.lion.gc
 import org.scalatest.FunSuite
 import GcParser.{parse, parseAtom}
 import MemoryRegion._
-import com.github.fommil.utils.{TimeInterval, Timestamp, GzResourceSupport}
+import com.github.fommil.utils.{TimeInterval, Timestamp, StringGzResourceSupport}
 
-class GcParserTest extends FunSuite with GzResourceSupport {
+class GcParserTest extends FunSuite with StringGzResourceSupport {
 
   test("read JDK 1.6.0_25 default GC atom") {
     val atom = """Heap before GC invocations=2 (full 0):

@@ -80,8 +80,10 @@ class GcAnalyser {
     val headers = DataHeader("Seconds") :: DataHeader(label) ::
       iLabels.map(i => RoleHeader("interval", `type` = "number", id = Some(i)))
 
-    val body = data.flatMap { raw => timeseriesBins(raw, 10 seconds, normalise = normalise) }.
-      toSortedMultiMap.flatMap {
+    val body = data.flatMap { raw =>
+      if (raw.isEmpty) None
+      else timeseriesBins(raw, 10 seconds, normalise = normalise)
+    }.toSortedMultiMap.flatMap {
       case (interval, rates) if rates.isEmpty => None
       case (interval, rates) =>
         val p = new Percentile withEffect { _.setData(rates.toArray) }
