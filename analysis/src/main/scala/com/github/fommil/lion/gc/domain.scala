@@ -34,13 +34,13 @@ object MemoryRegions {
     case ("PSYoungGen" | "par new generation", "from") => From
     case ("PSYoungGen" | "par new generation", "to") => To
     case ("ParOldGen" | "PSOldGen" | "concurrent mark-sweep generation", _) => Tenured
-    case ("PSPermGen" | "concurrent-mark-sweep perm gen", _) => Perm
+    case ("Metaspace" | "PSPermGen" | "concurrent-mark-sweep perm gen", _) => Perm
   }
 
   def fromLogname(region: String): Set[MemoryRegion] = region match {
     case "PSYoungGen" | "par new generation" | "ParNew" => Set(Eden, From, To)
     case "ParOldGen" | "PSOldGen" | "concurrent mark-sweep generation" => Set(Tenured)
-    case "PSPermGen" | "concurrent-mark-sweep perm gen" => Set(Perm)
+    case "Metaspace" | "PSPermGen" | "concurrent-mark-sweep perm gen" => Set(Perm)
   }
 
   val ALL = Eden :: From :: To :: Tenured :: Perm :: Nil

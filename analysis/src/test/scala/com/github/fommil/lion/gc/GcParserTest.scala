@@ -294,32 +294,16 @@ class GcParserTest extends FunSuite with StringGzResourceSupport {
     assert(events.size === 189)
   }
 
-  ignore("serialise GcEvents with Spray JSON") {
-    fail("not implemented")
-    //    val gcLog = fromGzRes("gc-jdk6.25-cms.log.gz")
-    //    val events = parse(gcLog)
-    //
-    //    import net.liftweb.json._
-    //    import net.liftweb.json.Serialization.{read, write}
-    //    implicit val formats = DefaultFormats + ShortTypeHints(List(
-    //              classOf[GcCollection], classOf[GcSnapshot], classOf[GcSurvivors], classOf[GcMark]
-    //            ))
-    //
-    //    val start = Timestamp.parse("2014-03-31T09:33:01.713+0100")
-    //    val end = Timestamp.parse("2014-03-31T09:33:07.364+0100")
-    //    val collection = GcCollection(356, start, end, Eden, MemoryUsage(401342464L, 0.54), MemoryUsage(401342464L, 0.0), true)
-    //    val snapshot = GcSnapshot(675, start, MemoryRegion.From, MemoryUsage(401342464L, 0.0))
-    //    val survivors = GcSurvivors(675, end, 1, Map("1" -> 50133488L))
-    //    val mark = GcMark(start, end, "blah", false)
-    //
-    //    assert(read[GcCollection](write(collection)) === collection)
-    //
-    //    assert(read[GcSnapshot](write(snapshot)) === snapshot)
-    //
-    //    assert(read[GcSurvivors](write(survivors)) === survivors)
-    //
-    //    assert(read[GcMark](write(mark)) === mark)
-    //
-    //    assert(read[List[GcEvent]](write(events)) == events)
+  test("read JDK 1.8.0 logs with CMS") {
+    val gcLog = fromGzRes("gc-jdk8.0-cms.log.gz")
+    val events = parse(gcLog)
+    assert(events.size === 2882)
   }
+
+  test("read JDK 1.8.0 logs with default") {
+    val gcLog = fromGzRes("gc-jdk8.0-default.log.gz")
+    val events = parse(gcLog)
+    assert(events.size === 168)
+  }
+
 }

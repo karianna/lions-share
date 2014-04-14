@@ -23,20 +23,21 @@ object GcParser {
   *
   * 1. 1.6.0_25
   * 2. 1.7.0_51
+  * 3. 1.8.0_0
   *
   * The following garbage collectors are supported:
   *
   * 1. default GC (i.e. `-XX:+UseParallelGC`)
-  * 2. default GC with parallel old gen: `-XX:+UseParallelOldGC`
+  * 2. default GC with parallel old gen, < 1.7.0: `-XX:+UseParallelOldGC`
   * 3. concurrent mark sweep: `-XX:+UseConcMarkSweepGC`
-  * 4. concurrent mark sweep (incremental): `-XX:+UseConcMarkSweepGC -XX:+CMSIncrementalMode`
+  * 4. concurrent mark sweep (incremental), < 1.8.0: `-XX:+UseConcMarkSweepGC -XX:+CMSIncrementalMode`
   *
   * @see https://blogs.oracle.com/poonam/entry/understanding_cms_gc_logs
   */
 private class GcParser extends GcParserCommon with GcParserDefault with GcParserCms with SLF4JLogging {
 
   // this could be done streaming, but meh...
-  def parseGcLog(source: String): List[GcEvent] = source.split("[{}]").par.flatMap { atom =>
+  def parseGcLog(source: String): GcEvents = source.split("[{}]").par.flatMap { atom =>
     if (atom.trim.isEmpty) Nil
     else Try(parseGcAtom(atom.trim)) match {
       case Success(events) => events
@@ -44,11 +45,14 @@ private class GcParser extends GcParserCommon with GcParserDefault with GcParser
     }
   }.toList
 
-  def parseGcAtom(atom: String): List[GcEvent] = {
-    val parse = ReportingParseRunner((DefaultGc | CmsGc) ~ EOI).run(atom)
+  def parseGcAtom(atom: String): GcEvents = {
+    val parse = ReportingParseRunner((DefaultGc | CmsGc | Header) ~ EOI).run(atom)
     parse.result match {
       case None =>
-        log.info(ErrorUtils.printParseErrors(parse) + atom)
+        log.info("Could not parse this part of the log. " +
+          "Please report this message (or the log), noting your version of Java, to " +
+          "https://github.com/fommil/lions-share/issues\n" +
+          ErrorUtils.printParseErrors(parse) + atom)
         Nil
 
       case Some(result) => result
@@ -69,11 +73,22 @@ trait GcParserCommon extends WhitespaceAwareParser {
 
 
   // common GC rules
+
+  def Header: Rule1[GcEvents] = rule {
+    "Java HotSpot(TM) " ~ oneOrMore(noneOf("\n")) ~ "\n" ~
+    "Memory: " ~ oneOrMore(noneOf("\n")) ~ "\n" ~
+    "CommandLine flags: " ~ oneOrMore(noneOf("\n"))
+  } ~> {s => Nil}
+
   def SurvivorSummary: Rule1[Int] = rule {
     "Desired survivor size " ~ Digits ~ " bytes, new threshold " ~ SavedDigits ~ " (max " ~ Digits ~ ")\n"
   } ~~> { _.toInt }
 
   def MemoryRegionSnapshot: Rule1[Map[MemoryRegion, MemoryUsage]] = rule {
+    TraditionalRegionSnapshot | MetaRegionSnapshot
+  }
+
+  def TraditionalRegionSnapshot: Rule1[Map[MemoryRegion, MemoryUsage]] = rule {
     " " ~ MemoryRegionName ~ " total " ~ SavedSize ~ ", used " ~ SavedSize ~ MemoryRegister ~
       zeroOrMore(MemorySubRegion)
   } ~~> { (name, totalSize, totalUsed, subRegions) =>
@@ -81,6 +96,13 @@ trait GcParserCommon extends WhitespaceAwareParser {
       Map(MemoryRegions.fromLognames(name, "") -> MemoryUsage(totalSize, totalUsed.toDouble / totalSize))
     else
       subRegions.map { sub => (MemoryRegions.fromLognames(name, sub._1), MemoryUsage(sub._2, sub._3)) }.toMap
+  }
+
+  def MetaRegionSnapshot: Rule1[Map[MemoryRegion, MemoryUsage]] = rule {
+    " Metaspace " ~ "used " ~ SavedSize ~ ", capacity " ~ SavedSize ~ ", committed " ~ Size ~ ", reserved " ~ Size ~
+      " class space " ~ "used " ~ Size ~ ", capacity " ~ Size ~ ", committed " ~ Size ~ ", reserved " ~ Size ~ " "
+  } ~~> { (used, total) =>
+    Map(MemoryRegion.Perm -> MemoryUsage(total, used.toDouble / total))
   }
 
   def MemorySubRegion: Rule1[(String, Long, Double)] = rule {
@@ -175,14 +197,8 @@ trait GcParserDefault {
     "Heap " ~ nTimesMap(3, MemoryRegionSnapshot)
   } ~~> { snaps => Nil }
 
-  def MemoryRegionOneLineSnapshot: Rule1[(MemoryRegion, MemoryUsage)] = rule {
-    " " ~ MemoryRegionName ~ " total " ~ SavedSize ~ ", used " ~ SavedSize ~ MemoryRegister
-  } ~~> { (name, total, used) =>
-    MemoryRegions.fromLognames(name, "") -> MemoryUsage(total, used.toDouble / total)
-  }
-
   def CollectionSummary: Rule1[(Boolean, Option[Int], List[String], Duration)] = rule {
-    "[ " ~ FullGc ~ " " ~
+    "[ " ~ FullGc ~ " " ~ optional("(Allocation Failure) ") ~
       optional(SurvivorSummary) ~
       oneOrMore(CollectionRegionSummary) ~
       CollectionSizes ~
@@ -215,7 +231,7 @@ trait GcParserCms {
       optional("GC" ~ optional("[YG occupancy: " ~ Size ~ " (" ~ Size ~ ")]" ~ Seconds ~ ": [Rescan (parallel) , " ~ Seconds ~
         " secs]" ~ Seconds ~ ": [weak refs processing, " ~ Seconds ~ " secs] " ~ optional(Seconds ~
         ": [class unloading, " ~ Seconds ~ " secs]" ~ Seconds ~ ": [scrub symbol & string tables, " ~
-        Seconds ~ " secs]")) ~ " [1") ~
+        Seconds ~ " secs]")) ~ optional(" (" ~ oneOrMore(noneOf("\n)")) ~ ")") ~ " [1") ~
       " CMS-" ~ " " ~ oneOrMore(noneOf(" ]:")) ~> identity ~
       zeroOrMore(noneOf("\n")) ~ optional("\n")
   } ~~> { (aborted, date, seconds, name) =>
@@ -273,7 +289,7 @@ trait GcParserCms {
   }
 
   def CmsCollectionSummary: Rule1[(Option[(Option[Int], Map[Int, Long])], Boolean, Duration)] = rule {
-    "[" ~ optional("Full" ~> identity) ~ " GC " ~ optional(IsoDate ~ ": ") ~
+    "[" ~ optional("Full" ~> identity) ~ " GC " ~ optional(IsoDate ~ ": ") ~ optional("(Allocation Failure) ") ~
       optional(Seconds ~ ": " ~ ParNewCollection) ~
       optional(Seconds ~ ": [CMS" ~ IsoDate ~ ": " ~ Seconds ~ ": [CMS" ~ oneOrMore("a" - "z" | anyOf(" -")) ~
         ": " ~ Seconds ~ "/" ~ Seconds ~ " secs]" ~ Times) ~

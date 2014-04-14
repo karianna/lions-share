@@ -32,7 +32,8 @@ object LionPlugin extends Plugin with StringGzResourceSupport with StringResourc
       (streams in Runtime).value,
       (update in Runtime).value,
       (lionRuns in lion).value,
-      (lionOut in lion).value
+      (lionOut in lion).value,
+      (javaOptions in Runtime).value
     )
   )
 
@@ -53,7 +54,8 @@ object LionPlugin extends Plugin with StringGzResourceSupport with StringResourc
               streams: TaskStreams,
               update: UpdateReport,
               runs: Int,
-              out: File): Unit = {
+              out: File,
+              vmArgs: Seq[String]): Unit = {
     val log = streams.log
     if (main.isEmpty) {
       log.warn("lionClass (or mainClass) must be set")
@@ -71,10 +73,9 @@ object LionPlugin extends Plugin with StringGzResourceSupport with StringResourc
         "-XX:+PrintGCDetails", "-XX:+PrintGCDateStamps", "-XX:+PrintTenuringDistribution", "-XX:+PrintHeapAtGC",
         "-Dhack=" + jar
         // IMPL: pass the jar as the agent
-      )
+      ) ++ vmArgs
       val runner = new ForkRun(ForkOptions(runJVMOptions = javaOptions))
       // NOTE: constraint is that the user cannot pass extra args
-      // maybe we use settings to entirely define the run
       toError(runner.run(main.get, data(cp), Nil, log))
 
       val gcLogContents = fromFile(gcLog)
