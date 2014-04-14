@@ -1,6 +1,7 @@
 import sbt._
 import Keys._
 import org.sbtidea.SbtIdeaPlugin._
+import Package.ManifestAttributes
 
 object LionBuild extends FommilBuild with Dependencies {
 
@@ -9,7 +10,11 @@ object LionBuild extends FommilBuild with Dependencies {
 
   lazy val agent = module("agent") settings (
     // all this for a pure java module...
-    autoScalaLibrary := false, ideaIncludeScalaFacet := false, crossPaths := false)
+    autoScalaLibrary := false, ideaIncludeScalaFacet := false, crossPaths := false,
+    libraryDependencies ++= Seq(lombok, allocInstrument),
+    packageOptions := Seq(ManifestAttributes("Premain-Class" -> "com.github.fommil.lion.agent.Bond"))
+    // TODO: need to build a single jar
+  )
 
   lazy val analysis = module("analysis") dependsOn (agent) settings (
     libraryDependencies ++= sprayjson :: commonsMaths :: akka :: logback :: scalatest :: Nil)
@@ -27,6 +32,9 @@ trait Dependencies {
     ExclusionRule(name = "commons-logging"),
     ExclusionRule(organization = "org.slf4j")
   )
+
+  val lombok = "org.projectlombok" % "lombok" % "1.12.6" % "provided"
+  val allocInstrument = "com.google.code.java-allocation-instrumenter" % "java-allocation-instrumenter" % "2.1"
 
   val scalatest = "org.scalatest" %% "scalatest" % "2.1.3" % "test"
 // needed when we got to scala 2.11

@@ -71,7 +71,7 @@ object LionPlugin extends Plugin with StringGzResourceSupport with StringResourc
       val javaOptions = Seq(
         s"-Xloggc:${gcLog.getAbsolutePath }",
         "-XX:+PrintGCDetails", "-XX:+PrintGCDateStamps", "-XX:+PrintTenuringDistribution", "-XX:+PrintHeapAtGC",
-        "-Dhack=" + jar
+        "-javaagent:" + jar
         // IMPL: pass the jar as the agent
       ) ++ vmArgs
       val runner = new ForkRun(ForkOptions(runJVMOptions = javaOptions))
