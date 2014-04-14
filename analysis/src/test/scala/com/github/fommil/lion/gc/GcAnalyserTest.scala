@@ -13,17 +13,21 @@ class GcAnalyserTest extends FunSuite with StringGzResourceSupport {
 
   test("pauses") {
     analyzer.averagePauses(events :: Nil)
+    analyzer.averagePauses(Nil)
   }
 
   test("throughput") {
     analyzer.throughput(Map("blah" -> events))
+    analyzer.throughput(Map("blah" -> Nil))
   }
 
   test("allocations") {
     analyzer.averageAllocations(events :: Nil)
+    analyzer.averageAllocations(Nil)
   }
 
   test("profile") {
     analyzer.averageProfile(events :: Nil)
+    analyzer.averageProfile(Nil)
   }
 }

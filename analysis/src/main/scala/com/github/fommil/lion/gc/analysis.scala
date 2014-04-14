@@ -93,8 +93,10 @@ class GcAnalyser {
   }
 
   private def baseline[T](processes: Seq[Seq[(Timestamp, T)]]) = processes.map { data =>
-    val base = data.unzip._1.min.instant
-    data.map { case (time, value) => ((time.instant - base).millis, value) }
+    if (data.isEmpty) Nil else {
+      val base = data.unzip._1.min.instant
+      data.map { case (time, value) => ((time.instant - base).millis, value) }
+    }
   }
 
   private def allocationsRaw(events: GcEvents) = {
@@ -151,11 +153,13 @@ class GcAnalyser {
     def duration(from: Timestamp, to: Timestamp) = (to.instant - from.instant) / 1000.0
 
     def collectPauses(full: Boolean) = processes.map { process =>
-      val start = process.min.interval.from
-      process.collect {
-        case GcCollection(_, TimeInterval(from, to), _, _, _, `full`) =>
-          ((from.instant - start.instant).millis, duration(from, to))
-      }.sortBy(_._1)
+      if (process.isEmpty) Nil else {
+        val start = process.min.interval.from
+        process.collect {
+          case GcCollection(_, TimeInterval(from, to), _, _, _, `full`) =>
+            ((from.instant - start.instant).millis, duration(from, to))
+        }.sortBy(_._1)
+      }
     }
 
     val newgen = collectPauses(full = false)
@@ -184,16 +188,18 @@ class GcAnalyser {
     *
     */
   def throughput(processes: Map[String, GcEvents]): DataTable = {
-    def uptime(events: GcEvents) = (events.max.interval.to.instant - events.min.interval.from.instant) / 1000.0
+    def uptime(events: GcEvents) = if (events.isEmpty) 0.0 else (events.max.interval.to.instant - events.min.interval.from.instant) / 1000.0
     def collecting(events: GcEvents) = events.collect { case c: GcCollection =>
       (c.groupId, c.interval.duration)
     }.toMap.values.reduceOption[Duration](_ + _).getOrElse(Duration.Zero).toUnit(TimeUnit.SECONDS)
 
     val headers = DataHeader("Throughput") :: Nil
-    val body = processes.map { case (id, events) =>
-      val up = uptime(events)
-      val gc = collecting(events)
-      Row(DataCell(100 * (up - gc) / up, Some(id)) :: Nil)
+    val body = processes.flatMap { case (id, events) =>
+      if (events.isEmpty) None else {
+        val up = uptime(events)
+        val gc = collecting(events)
+        Some(Row(DataCell(100 * (up - gc) / up, Some(id)) :: Nil))
+      }
     }.toList
     DataTable(headers, body)
   }
