@@ -2,13 +2,15 @@ import sbt._
 import Keys._
 import org.sbtidea.SbtIdeaPlugin._
 import Package.ManifestAttributes
+import sbtassembly.Plugin._
+import AssemblyKeys._
 
 object LionBuild extends FommilBuild with Dependencies {
 
   override def projectOrg = "com.github.fommil.lion"
   override def projectVersion = "1.0-SNAPSHOT"
 
-  lazy val agent = module("agent") settings (
+  lazy val agent = Project(id = "agent", base = file("agent"), settings = defaultSettings ++ assemblySettings) settings (
     // all this for a pure java module...
     autoScalaLibrary := false, ideaIncludeScalaFacet := false, crossPaths := false,
     libraryDependencies ++= Seq(lombok, allocInstrument),
