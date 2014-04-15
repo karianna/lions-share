@@ -14,8 +14,12 @@ object LionBuild extends FommilBuild with Dependencies {
     // all this for a pure java module...
     autoScalaLibrary := false, ideaIncludeScalaFacet := false, crossPaths := false,
     libraryDependencies ++= Seq(lombok, allocInstrument),
-    packageOptions := Seq(ManifestAttributes("Premain-Class" -> "com.github.fommil.lion.agent.Bond"))
-    // TODO: need to build a single jar
+    packageOptions := Seq(ManifestAttributes("Premain-Class" -> "com.github.fommil.lion.agent.Bond")),
+    artifact in (Compile, assembly) ~= { art =>
+      art.copy(`classifier` = Some("assembly"))
+    }
+  ) settings (
+    addArtifact(artifact in (Compile, assembly), assembly).settings: _*
   )
 
   lazy val analysis = module("analysis") dependsOn (agent) settings (
