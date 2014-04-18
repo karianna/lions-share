@@ -1,3 +1,4 @@
+import java.io.FileNotFoundException
 import sbt._
 import sbt.ForkOptions
 import sbt.Keys._
@@ -16,10 +17,16 @@ object LionPlugin extends Plugin with StringGzResourceSupport with StringResourc
   val lionOut = SettingKey[File]("output directory for lions-share reports and log files.")
 
   // https://github.com/sbt/sbt/issues/1260
-  private val agent = "com.github.fommil.lion" % "agent" % "1.0-SNAPSHOT"
+  //private val agent = "com.github.fommil.lion" % "agent" % "1.0-SNAPSHOT"
+  private val agentFile = new File("agent-assembly.jar")
+  if (!agentFile.isFile)
+    throw new FileNotFoundException(
+      "fix http://stackoverflow.com/questions/23090044 or manually install " + agentFile.getAbsoluteFile +
+        " from ~/.ivy2/local/com.github.fommil.lion/agent/1.0-SNAPSHOT/jars/agent-assembly.jar"
+    )
 
   override val projectSettings = Seq(
-    libraryDependencies += agent,
+//    libraryDependencies += agent,
     lionRuns := 10,
     lionClass := None,
     lionOut := new File("lion-results"),
@@ -37,17 +44,18 @@ object LionPlugin extends Plugin with StringGzResourceSupport with StringResourc
     )
   )
 
-  def agentJar(update: UpdateReport): File = {
-    for {
-      report <- update.configuration("runtime-internal").get.modules
-      module = report.module
-      if module.organization == agent.organization
-      if module.name == agent.name
-      if module.revision == agent.revision
-      artifacts <- report.artifacts
-      file = artifacts._2
-    } yield file
-  }.head
+  def agentJar(update: UpdateReport): File = agentFile
+//  {
+//    for {
+//      report <- update.configuration("runtime-internal").get.modules
+//      module = report.module
+//      if module.organization == agent.organization
+//      if module.name == agent.name
+//      if module.revision == agent.revision
+//      artifacts <- report.artifacts
+//      file = artifacts._2
+//    } yield file
+//  }.head
 
   def runLion(cp: Classpath,
               main: Option[String],
@@ -68,11 +76,11 @@ object LionPlugin extends Plugin with StringGzResourceSupport with StringResourc
     val jar = agentJar(update)
     val processes = (1 to runs) map { run =>
       val gcLog = new File(out, s"gc-$run.log")
+      val allocLog = new File(out, s"alloc-$run.log")
       val javaOptions = Seq(
         s"-Xloggc:${gcLog.getAbsolutePath }",
         "-XX:+PrintGCDetails", "-XX:+PrintGCDateStamps", "-XX:+PrintTenuringDistribution", "-XX:+PrintHeapAtGC",
-        "-javaagent:" + jar
-        // IMPL: pass the jar as the agent
+        "-javaagent:" + jar + s"=$allocLog java.lang.String:1024"
       ) ++ vmArgs
       val runner = new ForkRun(ForkOptions(runJVMOptions = javaOptions))
       // NOTE: constraint is that the user cannot pass extra args

@@ -13,8 +13,14 @@ object LionBuild extends FommilBuild with Dependencies {
   lazy val agent = Project(id = "agent", base = file("agent"), settings = defaultSettings ++ assemblySettings) settings (
     // all this for a pure java module...
     autoScalaLibrary := false, ideaIncludeScalaFacet := false, crossPaths := false,
-    libraryDependencies ++= Seq(lombok, allocInstrument),
-    packageOptions := Seq(ManifestAttributes("Premain-Class" -> "com.github.fommil.lion.agent.Bond")),
+    libraryDependencies ++= Seq(lombok, allocInstrument, guava),
+    packageOptions := Seq(ManifestAttributes(
+      "Premain-Class" -> "com.github.fommil.lion.agent.AllocationAgent",
+      "Boot-Class-Path" -> "agent-assembly.jar",
+      "Can-Redefine-Classes" -> "true",
+      "Can-Retransform-Classes" -> "true",
+      "Main-Class" -> "NotSuitableAsMain"
+    )),
     artifact in (Compile, assembly) ~= { art =>
       art.copy(`classifier` = Some("assembly"))
     }
@@ -40,7 +46,9 @@ trait Dependencies {
   )
 
   val lombok = "org.projectlombok" % "lombok" % "1.12.6" % "provided"
-  val allocInstrument = "com.google.code.java-allocation-instrumenter" % "java-allocation-instrumenter" % "2.1"
+//  val allocInstrument = "com.google.code.java-allocation-instrumenter" % "java-allocation-instrumenter" % "2.1"
+  val allocInstrument = "com.github.fommil" % "java-allocation-instrumenter" % "2.2-SNAPSHOT"
+  val guava = "com.google.guava" % "guava" % "17.0-rc2"
 
   val scalatest = "org.scalatest" %% "scalatest" % "2.1.3" % "test"
 // needed when we got to scala 2.11
@@ -73,8 +81,12 @@ trait FommilBuild extends Build {
     scalacOptions in Compile ++= Seq(
       "-encoding", "UTF-8", "-target:jvm-1.6", "-Xfatal-warnings",
       "-language:postfixOps", "-language:implicitConversions"),
-    javacOptions in (Compile, compile) ++= Seq("-source", "1.6", "-target", "1.6", "-Xlint:all", "-Xlint:-options", "-Werror"),
+    javacOptions in (Compile, compile) ++= Seq (
+      "-source", "1.6", "-target", "1.6", "-Xlint:all", "-Werror",
+      "-Xlint:-options", "-Xlint:-path", "-Xlint:-processing"
+    ),
     javacOptions in (doc) ++= Seq("-source", "1.6"),
+    compileOrder := CompileOrder.JavaThenScala,
     outputStrategy := Some(StdoutOutput),
     fork := true,
     maxErrors := 1,
