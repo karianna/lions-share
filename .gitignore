@@ -21,3 +21,6 @@ project/plugins/project/
 Scratch.java
 Scratch.scala
 lion-results
+
+.ensime
+.ensime_lucene
