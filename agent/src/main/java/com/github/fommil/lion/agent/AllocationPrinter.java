@@ -23,7 +23,7 @@ public class AllocationPrinter implements Runnable {
     private volatile Date from = new Date();
 
     @Override
-    public void run() {
+    public synchronized void run() {
         Date to = new Date();
         Map<String, List<StackTraceElement[]>> traces = sampler.snapshotTraces();
         Map<String, Map<Integer, Long>> lengths = sampler.snapshotArrayLengths();
@@ -33,7 +33,7 @@ public class AllocationPrinter implements Runnable {
         try {
             Writer writer = null;
             try {
-                writer = new FileWriter(out);
+                writer = new FileWriter(out, true);
                 writeSizes(writer, sizes, to);
                 if (!traces.isEmpty())
                     writeStackTraces(writer, traces, to);
@@ -179,10 +179,4 @@ public class AllocationPrinter implements Runnable {
     private void writeKeyValue(Writer writer, String key, long value) throws IOException {
         writer.append("\"").append(key).append("\":").append(Long.toString(value));
     }
-
-//    private void writeKeyValue(Writer writer, int key, long value) throws IOException {
-//        // keys must be Strings
-//        writer.append("\"").append(Integer.toString(key)).append("\":").append(Long.toString(value));
-//    }
-
 }

@@ -9,7 +9,7 @@ import org.parboiled.scala._
 import com.github.fommil.utils.{TimeInterval, Timestamp, WhitespaceAwareParser}
 
 object GcParser {
-  def parse(source: String) = parser.parseGcLog(source)
+  def parse(source: String) = parser.parseGcLog(source).sorted
 
   private val parser = new GcParser
   protected[gc] def parseAtom(atom: String) = parser.parseGcAtom(atom)

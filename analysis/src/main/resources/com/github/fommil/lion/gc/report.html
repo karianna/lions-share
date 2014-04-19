@@ -1,68 +1,12 @@
 <!DOCTYPE html>
-<html lang="en-US">
+<html lang="en-GB">
 <head>
     <meta charset="UTF-8">
     <script type="text/javascript" src="https://www.google.com/jsapi"></script>
-    <script type="text/javascript" src="data.js"></script>
+    <script type="text/javascript" src="gc.js"></script>
     <style>
         html {
             font-family: sans-serif;
-        }
-
-        .modalDialog {
-            position: fixed;
-            font-family: Arial, Helvetica, sans-serif;
-            top: 0;
-            right: 0;
-            bottom: 0;
-            left: 0;
-            background: rgba(0, 0, 0, 0.8);
-            z-index: 99999;
-            opacity: 0;
-            -webkit-transition: opacity 200ms ease-in;
-            -moz-transition: opacity 200ms ease-in;
-            transition: opacity 200ms ease-in;
-            pointer-events: none;
-        }
-
-        .modalDialog:target {
-            opacity: 1;
-            pointer-events: auto;
-        }
-
-        .modalDialog > div {
-            width: 800px;
-            position: relative;
-            margin: 10% auto;
-            padding: 5px 20px 13px 20px;
-            border-radius: 10px;
-            background: #fff;
-            background: -moz-linear-gradient(#fff, #999);
-            background: -webkit-linear-gradient(#fff, #999);
-            background: -o-linear-gradient(#fff, #999);
-        }
-
-        .close {
-            background: #606061;
-            color: #FFFFFF;
-            line-height: 25px;
-            position: absolute;
-            left: -12px;
-            text-align: center;
-            bottom: -10px;
-            width: 24px;
-            text-decoration: none;
-            font-weight: bold;
-            -webkit-border-radius: 12px;
-            -moz-border-radius: 12px;
-            border-radius: 12px;
-            -moz-box-shadow: 1px 1px 3px #000;
-            -webkit-box-shadow: 1px 1px 3px #000;
-            box-shadow: 1px 1px 3px #000;
-        }
-
-        .close:hover {
-            background: #00d9ff;
         }
     </style>
     <script type="text/javascript">
@@ -90,7 +34,8 @@
                 legend: {position: 'none'},
                 width: 2048, height: 600,
                 intervals: {style: 'area'},
-                chartArea: {top: 20, left: 100, right: 0, height: 500}
+                chartArea: {top: 20, left: 100, right: 0, height: 500},
+                pointSize: 2
             };
             new google.visualization.LineChart(el).draw(table, options);
         }
@@ -109,7 +54,8 @@
                     i1: { color: 'red', 'style': 'bars', lineWidth: 0, barWidth: 10, pointSize: 10, fillOpacity: 1},
                     i0: { style: 'area'}
                 },
-                curveType: 'function'
+                curveType: 'function',
+                pointSize: 2
             };
             new google.visualization.LineChart(el).draw(table, options);
         }
@@ -140,7 +86,8 @@
                     nb1: { color: '#98b2e5', style: 'area'},
                     nb2: { color: '#98b2e5', style: 'sticks', pointSize: 0}
                 },
-                colors: ['red', '#98b2e5', '#3366cc']
+                colors: ['red', '#98b2e5', '#3366cc'],
+                pointSize: 2
             };
             new google.visualization.LineChart(el).draw(table, options);
         }
@@ -149,19 +96,7 @@
 
 <body>
 <div>
-    <h1>Lion's Share Report</h1>
-
-    <div id="modal" class="modalDialog">
-        <a id="openModal" href="#modal" style="visibility: hidden;"></a>
-
-        <div>
-            <a href="#close" title="Close" class="close">X</a>
-
-            <div id="popup_title"></div>
-            <div id="popup"></div>
-            <div id="popup_secondary"></div>
-        </div>
-    </div>
+    <h1>Lion's Share Garbage Collection Report</h1>
 
     <h2>Throughput</h2>
     The percentage of time doing work (not collecting garbage).

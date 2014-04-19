@@ -11,6 +11,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.lang.System.out;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
@@ -34,6 +35,7 @@ public class AllocationAgent {
             out.println("[AGENT] Deleted an existing " + outFile.getAbsolutePath());
 
         Long period = Long.parseLong(args[1]);
+        checkArgument(period > 0, "period must be greater than zero seconds");
 
         out.println("[AGENT] Writing allocation data to " + outFile.getAbsolutePath());
         out.println("[AGENT] Taking snapshots every " + period + " seconds");
@@ -43,6 +45,8 @@ public class AllocationAgent {
             for (String arg : args[2].split(",")) {
                 String[] parts = arg.split(":");
                 Long sampleRate = Long.parseLong(parts[1]);
+                checkArgument(!parts[0].contains(" "), parts[0] + " is not a valid type (spaces not allowed)");
+                checkArgument(!parts[0].contains("."), parts[0] + " is not a valid type (replace dots with slashes)");
                 out.println("[AGENT] " + parts[0] + " will be sampled every " + sampleRate + " bytes");
                 rates.put(parts[0], sampleRate);
             }
@@ -51,8 +55,19 @@ public class AllocationAgent {
         AllocationSampler sampler = new AllocationSampler(rates, rates.keySet());
         AllocationRecorder.addSampler(sampler);
 
-        AllocationPrinter collector = new AllocationPrinter(sampler, outFile);
-        executor.scheduleWithFixedDelay(collector, period, period, SECONDS);
+        final AllocationPrinter printer = new AllocationPrinter(sampler, outFile);
+        executor.scheduleWithFixedDelay(printer, period, period, SECONDS);
+
+        Runtime.getRuntime().addShutdownHook(new Thread(){
+            @Override
+            public void run() {
+                // tries to get logs on shutdown
+                printer.run();
+            }
+        });
+
+        // futile attempt to clear out stats about JVM internals...
+        sampler.clear();
     }
 
 }
