@@ -47,6 +47,7 @@ object LionPlugin extends Plugin with StringGzResourceSupport with StringResourc
       "java/lang/Long",
       "java/lang/Integer",
       "java/lang/Double",
+      "java/lang/String",
       "boolean",
       "long",
       "int",
