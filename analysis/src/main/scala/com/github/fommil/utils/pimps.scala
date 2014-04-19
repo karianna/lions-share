@@ -1,29 +1,32 @@
 package com.github.fommil.utils
 
 import scala.collection.{SortedMap, breakOut}
+import java.util.concurrent.Callable
 
-// nice way to perform side-effects, if you must...
-class PimpedAny[T](val a: T) extends AnyVal {
-  def withEffect(effect: T => Unit) = {
-    effect(a)
-    a
-  }
-}
-object PimpedAny {
-  implicit def withEffectAny[T](a: T) = new PimpedAny(a)
-}
+object Pimps {
 
-
-// poor man's MultiMap
-class PimpedAsMultimap[K, V](val a: Traversable[(K, V)]) extends AnyVal {
-  def toMultiMap: Map[K, Seq[V]] = a.groupBy(_._1).map {
-    case (k, vs) => (k, vs.map(_._2)(breakOut))
+  // nice way to perform side-effects, if you must...
+  implicit class PimpedAny[T](a: T) {
+    def withEffect(effect: T => Unit) = {
+      effect(a)
+      a
+    }
   }
 
-  def toSortedMultiMap(implicit s: Ordering[K]): SortedMap[K, Seq[V]] = a.groupBy(_._1).map {
-    case (k, vs) => (k, vs.map(_._2)(breakOut))
-  }(breakOut)
-}
-object PimpedAsMultimap {
-  implicit def pimpAsMultimap[K, V](a: Traversable[(K, V)]) = new PimpedAsMultimap(a)
+  // poor man's MultiMap
+  implicit class PimpedAsMultimap[K, V](a: Traversable[(K, V)]) {
+    def toMultiMap: Map[K, Seq[V]] = a.groupBy(_._1).map {
+      case (k, vs) => (k, vs.map(_._2)(breakOut))
+    }
+
+    def toSortedMultiMap(implicit s: Ordering[K]): SortedMap[K, Seq[V]] = a.groupBy(_._1).map {
+      case (k, vs) => (k, vs.map(_._2)(breakOut))
+    }(breakOut)
+  }
+
+  // interact with legacy Java APIs
+  implicit def closureToCallable[T](t: => T): Callable[T] = new Callable[T] {
+    def call: T = t
+  }
+
 }

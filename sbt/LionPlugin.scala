@@ -6,8 +6,8 @@ import sbt.Attributed.data
 
 import com.github.fommil
 import fommil.lion.gc.{GcReporter, GcParser}
-import com.github.fommil.utils.{StringResourceSupport, StringFileSupport, StringGzResourceSupport}
-import fommil.utils.PimpedAny._
+import fommil.utils.{StringResourceSupport, StringFileSupport, StringGzResourceSupport}
+import fommil.utils.Pimps._
 
 object LionPlugin extends Plugin with StringGzResourceSupport with StringResourceSupport with StringFileSupport {
 
@@ -80,7 +80,7 @@ object LionPlugin extends Plugin with StringGzResourceSupport with StringResourc
       val javaOptions = Seq(
         s"-Xloggc:${gcLog.getAbsolutePath }",
         "-XX:+PrintGCDetails", "-XX:+PrintGCDateStamps", "-XX:+PrintTenuringDistribution", "-XX:+PrintHeapAtGC",
-        "-javaagent:" + jar + s"=$allocLog java.lang.String:1024"
+        "-javaagent:" + jar + s"=$allocLog 2 java.lang.String:1024,int:1024"
       ) ++ vmArgs
       val runner = new ForkRun(ForkOptions(runJVMOptions = javaOptions))
       // NOTE: constraint is that the user cannot pass extra args

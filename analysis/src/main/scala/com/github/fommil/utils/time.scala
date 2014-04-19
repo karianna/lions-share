@@ -2,6 +2,7 @@ package com.github.fommil.utils
 
 import scala.concurrent.duration.{FiniteDuration, Duration, DurationLong}
 import java.text.{SimpleDateFormat, DateFormat}
+import spray.json.DefaultJsonProtocol
 
 /*
  * This file is a bit of an embarrassment... at the time of writing there
@@ -43,6 +44,14 @@ object TimeInterval extends ((Timestamp, Timestamp) => TimeInterval) {
   def apply(from: Long, to: Long): TimeInterval = TimeInterval(Timestamp(from), Timestamp(to))
 }
 
+trait HasInterval {
+  def interval: TimeInterval
+}
+
+trait OrderedByInterval[T <: HasInterval] extends HasInterval with Ordered[T] {
+  def compare(that: T) = interval compare that.interval
+}
+
 // the last entry may be smaller than the rest
 class TimeIntervalRange private (start: Timestamp, end: Timestamp, s: Long,
                                  override val length: Int) extends IndexedSeq[TimeInterval] {
@@ -68,3 +77,12 @@ object TimeIntervalRange {
     new TimeIntervalRange(start, end, s, length.toInt)
   }
 }
+
+
+trait TimeMarshalling {
+  import DefaultJsonProtocol._
+
+  implicit val TimestampFormat = jsonFormat1(Timestamp)
+  implicit val TimeIntervalFormat = jsonFormat2(TimeInterval)
+}
+object TimeMarshalling extends TimeMarshalling

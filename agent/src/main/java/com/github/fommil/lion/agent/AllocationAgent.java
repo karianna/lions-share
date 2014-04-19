@@ -30,23 +30,29 @@ public class AllocationAgent {
 
         String filename = args[0];
         File outFile = new File(filename);
-        outFile.delete();
-        out.println("Writing allocation data to " + outFile.getAbsolutePath());
+        if (outFile.delete())
+            out.println("[AGENT] Deleted an existing " + outFile.getAbsolutePath());
+
+        Long period = Long.parseLong(args[1]);
+
+        out.println("[AGENT] Writing allocation data to " + outFile.getAbsolutePath());
+        out.println("[AGENT] Taking snapshots every " + period + " seconds");
 
         Map<String, Long> rates = Maps.newHashMap();
-        for (String arg : args[1].split(",")) {
-            String[] parts = arg.split(":");
-            Long sampleRate = Long.parseLong(parts[1]);
-            out.println(parts[0] + " will be sampled every " + sampleRate + " bytes");
-            rates.put(parts[0], sampleRate);
-        }
+        if (args.length > 2)
+            for (String arg : args[2].split(",")) {
+                String[] parts = arg.split(":");
+                Long sampleRate = Long.parseLong(parts[1]);
+                out.println("[AGENT] " + parts[0] + " will be sampled every " + sampleRate + " bytes");
+                rates.put(parts[0], sampleRate);
+            }
 
         AllocationInstrumenter.premain(agentArgs, inst);
         AllocationSampler sampler = new AllocationSampler(rates, rates.keySet());
         AllocationRecorder.addSampler(sampler);
 
         AllocationPrinter collector = new AllocationPrinter(sampler, outFile);
-        executor.scheduleWithFixedDelay(collector, 0, 30, SECONDS);
+        executor.scheduleWithFixedDelay(collector, period, period, SECONDS);
     }
 
 }

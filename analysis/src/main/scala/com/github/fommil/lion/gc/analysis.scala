@@ -1,8 +1,8 @@
 package com.github.fommil.lion.gc
 
-import com.github.fommil.utils.{PimpedAny, TimeInterval, TimeIntervalRange, Timestamp}
+import com.github.fommil.utils.{TimeInterval, TimeIntervalRange, Timestamp}
 import com.github.fommil.google._
-import com.github.fommil.utils.PimpedAsMultimap._
+import com.github.fommil.utils.Pimps._
 
 import scala.concurrent.duration
 import duration._
@@ -10,9 +10,7 @@ import scala.Some
 import com.github.fommil.google.DataTable
 import com.github.fommil.google.Row
 import java.util.concurrent.TimeUnit
-import PimpedAny._
 import org.apache.commons.math3.stat.descriptive.rank.Percentile
-import LabelCell.NullCell
 import FiniteDuration.FiniteDurationIsOrdered
 
 /** Produces data for consumption by Google Charts from garbage collection logs.

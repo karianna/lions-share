@@ -1,11 +1,9 @@
 package com.github.fommil.lion.gc
 
-import com.github.fommil.utils.TimeInterval
+import com.github.fommil.utils.{OrderedByInterval, TimeInterval}
 
-trait GcEvent extends Ordered[GcEvent] {
+trait GcEvent extends OrderedByInterval[GcEvent] {
   def groupId: Long
-  def interval: TimeInterval
-  override def compare(that: GcEvent) = interval compare that.interval
 }
 
 case class MemoryUsage(limit: Long, usedPercentage: Double) {
