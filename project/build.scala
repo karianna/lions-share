@@ -28,8 +28,8 @@ object LionBuild extends FommilBuild with Dependencies {
     addArtifact(artifact in (Compile, assembly), assembly).settings: _*
   )
 
-  lazy val analysis = module("analysis") dependsOn (agent) settings (
-    libraryDependencies ++= sprayjson :: commonsMaths :: akka :: logback :: jsr305 :: scalatest :: Nil)
+  lazy val analysis = module("analysis") settings (
+    libraryDependencies ++= sprayjson :: commonsMaths :: akka :: logback :: guava :: jsr305 :: scalatest :: Nil)
 
   lazy val sbt = module("sbt") dependsOn (analysis) settings (
     sbtPlugin := true)
@@ -94,11 +94,9 @@ trait FommilBuild extends Build {
     maxErrors := 1,
     resolvers ++= Seq(
       Resolver.mavenLocal,
-      Resolver.sonatypeRepo("releases"),
       Resolver.typesafeRepo("releases"),
-      Resolver.typesafeRepo("snapshots"),
-      Resolver.sonatypeRepo("snapshots"),
-      "spray" at "http://repo.spray.io/"
+      Resolver.sonatypeRepo("snapshots")
+//      "spray" at "http://repo.spray.io/"
     ),
     ideaExcludeFolders := List(".idea", ".idea_modules"),
     scalaVersion := projectScala
