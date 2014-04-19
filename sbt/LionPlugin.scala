@@ -1,4 +1,4 @@
-import com.github.fommil.lion.alloc.{AllocationReporter, AllocationAnalyser, AllocationParser}
+import com.github.fommil.lion.alloc.{AllocationSizes, AllocationReporter, AllocationAnalyser, AllocationParser}
 import java.io.FileNotFoundException
 import sbt._
 import sbt.ForkOptions
@@ -16,7 +16,8 @@ object LionPlugin extends Plugin with StringGzResourceSupport with StringResourc
   val lionRuns = SettingKey[Int]("number of times to run the main class during lions-share profiling.")
   val lionClass = SettingKey[Option[String]]("main class to run during lions-share profiling.")
   val lionOut = SettingKey[File]("output directory for lions-share reports and log files.")
-  val lionAlloc = SettingKey[Boolean]("enable the allocation agent (slows down the run)")
+  val lionAlloc = SettingKey[Boolean]("enable the allocation agent (slows down the run).")
+  val lionAllocTrim = SettingKey[Option[Int]]("only plot this many of the top-allocated objects for each datum.")
   val lionAllocRate = SettingKey[Int]("number of seconds to wait between polling the allocation agent.")
   val lionAllocTrace = SettingKey[Map[String, Long]](
     "classnames (using slash notation) to sample every given number of bytes"
@@ -37,6 +38,7 @@ object LionPlugin extends Plugin with StringGzResourceSupport with StringResourc
     lionClass := None,
     lionOut := new File("lion-results"),
     lionAlloc := true,
+    lionAllocTrim := Some(10),
     lionAllocRate := 5,
     // defaults are to sample core objects every 10MB
     lionAllocTrace := List(
@@ -61,6 +63,7 @@ object LionPlugin extends Plugin with StringGzResourceSupport with StringResourc
       (update in Runtime).value,
       (lionRuns in lion).value,
       (lionAlloc in lion).value,
+      (lionAllocTrim in lion).value,
       (lionAllocRate in lion).value,
       (lionAllocTrace in lion).value,
       (lionOut in lion).value,
@@ -87,6 +90,7 @@ object LionPlugin extends Plugin with StringGzResourceSupport with StringResourc
               update: UpdateReport,
               runs: Int,
               doAlloc: Boolean,
+              allocTrim: Option[Int],
               sampleSeconds: Int,
               trace: Map[String, Long],
               out: File,
@@ -132,6 +136,10 @@ object LionPlugin extends Plugin with StringGzResourceSupport with StringResourc
       AllocationParser.parse(fromFile(allocLog)) withEffect { events =>
         log.info(s"parsed ${events.size} allocation agent events")
       }
+    } map {events => events.collect {
+      case a: AllocationSizes if allocTrim.isDefined => a.trim(allocTrim.get)
+      case a => a
+    }
     } withEffect { processes =>
       AllocationReporter.allocReport(processes, new File(out, "alloc.js"))
       toFile(new File(out, "alloc.html"), fromRes("/com/github/fommil/lion/alloc/report.html"))

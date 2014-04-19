@@ -9,7 +9,9 @@ import StackFrame.{interned, clean}
 sealed trait AllocationSnapshot extends OrderedByInterval[AllocationSnapshot]
 
 case class AllocationSizes(interval: TimeInterval,
-                           sizes: Map[Clazz, Long]) extends AllocationSnapshot
+                           sizes: Map[Clazz, Long]) extends AllocationSnapshot {
+  def trim(keep: Int) = copy(sizes = sizes.toList.sortBy(-_._2).take(keep).toMap)
+}
 
 case class AllocationTraces(interval: TimeInterval,
                             traces: Map[Clazz, List[StackTrace]]) extends AllocationSnapshot
