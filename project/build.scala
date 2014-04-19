@@ -29,7 +29,7 @@ object LionBuild extends FommilBuild with Dependencies {
   )
 
   lazy val analysis = module("analysis") dependsOn (agent) settings (
-    libraryDependencies ++= sprayjson :: commonsMaths :: akka :: logback :: scalatest :: Nil)
+    libraryDependencies ++= sprayjson :: commonsMaths :: akka :: logback :: jsr305 :: scalatest :: Nil)
 
   lazy val sbt = module("sbt") dependsOn (analysis) settings (
     sbtPlugin := true)
@@ -49,6 +49,8 @@ trait Dependencies {
 //  val allocInstrument = "com.google.code.java-allocation-instrumenter" % "java-allocation-instrumenter" % "2.1"
   val allocInstrument = "com.github.fommil" % "java-allocation-instrumenter" % "2.2-SNAPSHOT"
   val guava = "com.google.guava" % "guava" % "17.0-rc2"
+  // guava doesn't declare jsr305
+  val jsr305 = "com.google.code.findbugs" % "jsr305" % "2.0.3"
 
   val scalatest = "org.scalatest" %% "scalatest" % "2.1.3" % "test"
 // needed when we got to scala 2.11
