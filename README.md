@@ -38,7 +38,7 @@ lionOut := new File("my-results") // output directory for lions-share reports an
 
 lionAllocRuns := 0 // runs with the allocation agent (slow)
 
-lionAllocTrim := None // only plot this many of the top-allocated objects for each datum. None doesn't do any trimming.
+lionAllocTrim := None // no trimming, or trim to this many top-allocated objects
 
 lionAllocRate := 30 // number of seconds to wait between polling the allocation agent.
 
