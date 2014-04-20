@@ -4,7 +4,7 @@ lions-share
 JVM development tools for finding memory and garbage problems.
 
 It can be used as a library - as part of custom regression and performance testing frameworks -
-or as an sbt plugin to get a report on a `main` class (or `App`).
+or as an [sbt](https://github.com/sbt/sbt) plugin to get a report on a `main` class (or scala `App`).
 
 Lion's Share produces HTML reports with interactive Google Charts.
 
@@ -32,7 +32,7 @@ The following are some example settings that can be defined in `build.sbt` to cu
 ```scala
 lionRuns := 50 // number of times to run the main class (without instrumentation)
 
-lionClass := path.to.MyMain // keep your mainclass but use this to run during lion
+lionClass := Some("path.to.MyMain") // override mainclass just for lions-share
 
 lionOut := new File("my-results") // output directory for lions-share reports and log files
 
@@ -42,7 +42,7 @@ lionAllocTrim := None // only plot this many of the top-allocated objects for ea
 
 lionAllocRate := 30 // number of seconds to wait between polling the allocation agent.
 
-lionAllocTrace := Map.empty[String, Long]] // classes and byte sample threshold
+lionAllocTrace := Map.empty[String, Long] // classes and byte sample threshold
 ```
 
 ### Examples
