@@ -104,24 +104,30 @@ object LionPlugin extends Plugin with StringGzResourceSupport with StringResourc
     log.info(s"running the lions-share $runs times for ${main.get}")
     out.mkdirs()
 
+    def fork(opts: String*) = {
+      val javaOptions = opts ++ vmArgs
+      val runner = new ForkRun(ForkOptions(runJVMOptions = javaOptions))
+      toError(runner.run(main.get, data(cp), Nil, log))
+    }
 
     // Non-instrumented runs with GC logging
     (1 to runs).map { run =>
       new File(out, s"gc-$run.log") withEffect { gcLog =>
-        val javaOptions = Seq(
-          s"-Xloggc:${gcLog.getAbsolutePath }",
-          "-XX:+PrintGCDetails", "-XX:+PrintGCDateStamps", "-XX:+PrintTenuringDistribution", "-XX:+PrintHeapAtGC"
-        ) ++ vmArgs
-        val runner = new ForkRun(ForkOptions(runJVMOptions = javaOptions))
-        toError(runner.run(main.get, data(cp), Nil, log))
+        fork(
+          s"-Xloggc:${gcLog.getAbsolutePath}",
+          "-XX:+PrintGCDetails", "-XX:+PrintGCDateStamps",
+          "-XX:+PrintTenuringDistribution", "-XX:+PrintHeapAtGC"
+        )
       }
-    }.map { gcLog =>
-      GcParser.parse(fromFile(gcLog)) withEffect { events =>
-        log.info(s"parsed ${events.size } garbage collection events")
+    }.map {gcLog =>
+      GcParser.parse(fromFile(gcLog))
+    }.withEffect { processes =>
+      if (processes.nonEmpty) {
+        GcReporter.gcReport(processes, new File(out, "gc.js"))
+        val report = new File(out, "gc.html")
+        toFile(report, fromRes("/com/github/fommil/lion/gc/report.html"))
+        log.info(s"lions-share garbage collection report is available at ${report.getAbsolutePath }")
       }
-    } withEffect { processes =>
-      GcReporter.gcReport(processes, new File(out, "gc.js"))
-      toFile(new File(out, "gc.html"), fromRes("/com/github/fommil/lion/gc/report.html"))
     }
 
     // Instrumented runs with Allocation Agent
@@ -129,28 +135,25 @@ object LionPlugin extends Plugin with StringGzResourceSupport with StringResourc
     val traces = (for((c,s) <- trace) yield s"$c:$s").mkString(",")
     (1 to allocRuns).map { run =>
       new File(out, s"alloc-$run.log") withEffect { allocLog =>
-        val javaOptions = Seq(
-          s"-javaagent:$jar=$allocLog $sampleSeconds $traces"
-        ) ++ vmArgs
-        val runner = new ForkRun(ForkOptions(runJVMOptions = javaOptions))
-        toError(runner.run(main.get, data(cp), Nil, log))
+        fork(s"-javaagent:$jar=$allocLog $sampleSeconds $traces")
       }
     }.map { allocLog =>
-      AllocationParser.parse(fromFile(allocLog)) withEffect { events =>
-        log.info(s"parsed ${events.size } allocation agent events")
-      }
-    } map { _.collect {
+      AllocationParser.parse(fromFile(allocLog)) collect {
         case a: AllocationSizes if allocTrim.isDefined => a.trim(allocTrim.get)
         case a => a
       }
     } withEffect { processes =>
-      AllocationReporter.allocReport(processes, new File(out, "alloc.js"))
-      toFile(new File(out, "alloc.html"), fromRes("/com/github/fommil/lion/alloc/report.html"))
+      if (processes.nonEmpty) {
+        AllocationReporter.allocReport(processes, new File(out, "alloc.js"))
+        val report = new File(out, "alloc.html")
+        toFile(report, fromRes("/com/github/fommil/lion/alloc/report.html"))
+        log.info(s"lions-share allocation report is available at ${report.getAbsolutePath }")
+      }
     }
     
-    val report = new File(out, "report.html")
+    val report = new File(out, "index.html")
     toFile(report, fromRes("/lion-report.html"))
-    log.info(s"lions-share report is available at ${report.getAbsolutePath}")
+    log.info(s"lions-share summary report is available at ${report.getAbsolutePath}")
   }
 
 }

@@ -37,7 +37,7 @@ public class AllocationAgent {
         if (outFile.delete())
             out.println("[AGENT] Deleted an existing " + outFile.getAbsolutePath());
 
-        Long period = Long.parseLong(args[1]);
+        final Long period = Long.parseLong(args[1]);
         checkArgument(period > 0, "period must be greater than zero seconds");
 
         out.println("[AGENT] Writing allocation data to " + outFile.getAbsolutePath());
@@ -55,11 +55,19 @@ public class AllocationAgent {
             }
 
         AllocationInstrumenter.premain(agentArgs, inst);
-        AllocationSampler sampler = new AllocationSampler(rates, rates.keySet());
+        final AllocationSampler sampler = new AllocationSampler(rates, rates.keySet());
         AllocationRecorder.addSampler(sampler);
 
         final AllocationPrinter printer = new AllocationPrinter(sampler, outFile);
-        executor.scheduleWithFixedDelay(printer, period, period, SECONDS);
+
+        // HACK futile attempt to clear out stats about JVM internals...
+        executor.schedule(new Runnable() {
+            @Override
+            public void run() {
+                sampler.clear();
+                executor.scheduleWithFixedDelay(printer, period, period, SECONDS);
+            }
+        }, period, SECONDS);
 
         Runtime.getRuntime().addShutdownHook(new Thread() {
             @Override
@@ -68,9 +76,6 @@ public class AllocationAgent {
                 printer.run();
             }
         });
-
-        // futile attempt to clear out stats about JVM internals...
-        sampler.clear();
     }
 
 }

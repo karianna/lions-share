@@ -100,16 +100,15 @@
 
     <h2>Throughput</h2>
     The percentage of time doing work (not collecting garbage).
+    Note that this is often not as important as the total time it takes to do the work.
     <div id="gcThroughput"></div>
 
     <h2>Object Creation</h2>
 
     <div>
-        Average allocation rates are shown as the solid line. 20% to 80% of results are within
-        the dark region, all results within the light region. If the application being studied
-        is incredibly predictable, you might just see a single line (that just means all the
-        runs had an identical garbage collection profile).
-        Remember that runs may have different lifetimes.
+        Average allocation rates are shown as the solid line. 60% of the data is within
+        the dark region and everything is within the light region. If the application being studied
+        is incredibly predictable, you might just see a single line as everything overlaps.
     </div>
     <div id="gcAllocationRate"></div>
 
@@ -121,7 +120,7 @@
 
     <div>
         Time spent paused doing garbage collection. <span style="color: red">Full GC</span> and
-        <span style="color: blue">New Generation only</span> shown separately (but note that new generation
+        <span style="color: blue">New Generation only</span> shown separately (note that new generation
         collectors can still follow new objects into dead old gen roots).
     </div>
     <div id="gcPauses"></div>

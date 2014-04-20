@@ -52,6 +52,7 @@ private class GcParser extends GcParserCommon with GcParserDefault with GcParser
         log.info("Could not parse this part of the log. " +
           "Please report this message (or the log), noting your version of Java, to " +
           "https://github.com/fommil/lions-share/issues\n" +
+          "or, even better, add a test case to the GcParserTest\n" +
           ErrorUtils.printParseErrors(parse) + atom)
         Nil
 

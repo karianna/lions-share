@@ -306,4 +306,12 @@ class GcParserTest extends FunSuite with StringGzResourceSupport {
     assert(events.size === 168)
   }
 
+  ignore("JDK 1.7.0_51 CMS marks") {
+    val atom = """2014-04-20T16:07:45.006+0100: 4.158: [CMS-concurrent-preclean: 0.276/2.042 secs] [Times: user=7.40 sys=0.06, real=2.04 secs]
+                 |2014-04-20T16:07:45.006+0100: 4.158: [CMS-concurrent-abortable-preclean-start]
+                 |2014-04-20T16:07:45.055+0100: 4.207: [CMS-concurrent-abortable-preclean: 0.049/0.049 secs] [Times: user=0.10 sys=0.00, real=0.05 secs]
+                 |2014-04-20T16:07:45.055+0100: 4.207: [GC[YG occupancy: 201474 K (255744 K)]2014-04-20T16:07:45.055+0100: 4.207: [Rescan (parallel) , 0.2207750 secs]2014-04-20T16:07:45.276+0100: 4.428: [weak refs processing, 0.0000180 secs]2014-04-20T16:07:45.276+0100: 4.428: [scrub string table, 0.0000720 secs] [1 CMS-remark: 283616K(284032K)] 485090K(539776K), 0.2209750 secs] [Times: user=0.85 sys=0.00, real=0.22 secs]
+                 |2014-04-20T16:07:45.276+0100: 4.428: [CMS-concurrent-sweep-start]""".stripMargin
+    assert(parseAtom(atom).size === 5)
+  }
 }
