@@ -6,7 +6,8 @@ JVM development tools for finding memory and garbage problems.
 It can be used as a library - as part of custom regression and performance testing frameworks -
 or as an [sbt](https://github.com/sbt/sbt) plugin to get a report on a `main` class (or scala `App`).
 
-Lion's Share produces HTML reports with interactive Google Charts.
+Lion's Share produces HTML reports with interactive Google Charts, e.g.
+[shapeless' `staging.scala` example](http://fommil.github.io/lions-share/shapeless/report.html).
 
 ## SBT Plugin
 
@@ -50,7 +51,7 @@ lionAllocTrace := Map.empty[String, Long] // classes and byte sample threshold
 There are some examples under the examples module, including:
 
 * demonstration of `Some` creation churn and performance impact.
-* shapeless' [`staging.scala`](http://github.com/milessabin/shapeless/blob/master/examples/src/main/scala/shapeless/examples/staging.scala) example which does runtime invocation of `scalac`.
+* shapeless' [`staging.scala`](http://github.com/milessabin/shapeless/blob/master/examples/src/main/scala/shapeless/examples/staging.scala) example which does runtime invocation of `scalac`. [`report.html`](http://fommil.github.io/lions-share/shapeless/report.html)
 
 
 ## Library
