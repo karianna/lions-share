@@ -91,6 +91,9 @@ You might need to run your application under a supported JVM, e.g.:
 JAVA_HOME=/opt/jdk1.7.0_51 sbt lion
 ```
 
+and if you need really robust garbage collection log parsing, try the commercial product [Censum by jClarity](http://www.jclarity.com/censum/).
+
+
 ## Planned Features
 
 1. CPU (instrumentation) sampling
