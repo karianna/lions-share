@@ -99,7 +99,31 @@ trait FommilBuild extends Build {
 //      "spray" at "http://repo.spray.io/"
     ),
     ideaExcludeFolders := List(".idea", ".idea_modules"),
-    scalaVersion := projectScala
+    scalaVersion := projectScala,
+    licenses := Seq("LGPL" -> url("https://www.gnu.org/licenses/lgpl.html")),
+    homepage := Some(url("http://github.com/fommil/lions-share")),
+    // http://www.scala-sbt.org/release/docs/Community/Using-Sonatype.html#sbt-sonatype-sbt
+    // don't forget to create your ~/.sbt/0.13/sonatype.sbt and ~/.sbt/0.13/plugins/gpg.sbt
+    publishMavenStyle := true,
+    publishArtifact in Test := false,
+    pomIncludeRepository := { _ => false },
+    publishTo <<= version { v: String =>
+         val nexus = "https://oss.sonatype.org/"
+         if (v.trim.endsWith("SNAPSHOT")) Some("snapshots" at nexus + "content/repositories/snapshots")
+         else                             Some("releases" at nexus + "service/local/staging/deploy/maven2")
+    },
+    pomExtra := (
+     <scm>
+       <url>git@github.com:fommil/lions-share.git</url>
+       <connection>scm:git:git@github.com:fommil/lions-share.git</connection>
+     </scm>
+     <developers>
+       <developer>
+         <id>fommil</id>
+         <name>Sam Halliday</name>
+       </developer>
+     </developers>
+    )
   )
 
   // would be nice not to have to define the 'root'

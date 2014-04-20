@@ -93,5 +93,6 @@ JAVA_HOME=/opt/jdk1.7.0_51 sbt lion
 
 ## Planned Features
 
-1. CPU Sampling
+1. CPU (instrumentation) sampling
 2. Scala REPL support (e.g. allocation sizes for a block)
+3. non-instrumentation timeseries instance counts
