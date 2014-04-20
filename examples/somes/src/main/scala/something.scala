@@ -4,7 +4,7 @@ object Something extends App {
   val strings = Array("foo", "bar", "baz", "quux")
 
   def get(i: Int): String = {
-    if (i < 1000000000) Some(strings(i&3)).get
+    if (i < 1000000000) strings(i&3)
     else throw new Exception("Too big")
   }
 
