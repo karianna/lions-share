@@ -87,7 +87,7 @@
                     $('#popup').html("you must enable lion-share's allocation trace sampling for this feature.");
                 } else {
                     if (typeof allocTraces[clazz] == "undefined") {
-                        $('#popup').html("data sampling has not been enabled for this class");
+                        $('#popup').html("data sampling has not been enabled for this class: customise your lionAllocTrace setting");
                     } else if (typeof allocTraces[clazz][time] == "undefined") {
                         $('#popup').html("no samples collected at this time (try nearby points)");
                     } else {
