@@ -13,23 +13,21 @@ import fommil.utils.Pimps._
 object LionPlugin extends Plugin with StringGzResourceSupport with StringResourceSupport with StringFileSupport {
 
   val lion = TaskKey[Unit]("lion", "Run a main class with lions-share profiling.")
-  val lionRuns = SettingKey[Int]("number of times to run the main class during lions-share profiling.")
+  val lionRuns = SettingKey[Int]("number of times to run the main class (without instrumentation).")
   val lionClass = SettingKey[Option[String]]("main class to run during lions-share profiling.")
   val lionOut = SettingKey[File]("output directory for lions-share reports and log files.")
-  val lionAlloc = SettingKey[Boolean]("enable the allocation agent (slows down the run).")
+  val lionAllocRuns = SettingKey[Int]("enable additional runs with the allocation agent (slow).")
   val lionAllocTrim = SettingKey[Option[Int]]("only plot this many of the top-allocated objects for each datum.")
   val lionAllocRate = SettingKey[Int]("number of seconds to wait between polling the allocation agent.")
-  val lionAllocTrace = SettingKey[Map[String, Long]](
-    "classnames (using slash notation) to sample every given number of bytes"
-  )
+  val lionAllocTrace = SettingKey[Map[String, Long]]("classes and byte sample threshold")
 
   // https://github.com/sbt/sbt/issues/1260
   //private val agent = "com.github.fommil.lion" % "agent" % "1.0-SNAPSHOT"
   private val agentFile = new File("agent-assembly.jar")
   if (!agentFile.isFile)
     throw new FileNotFoundException(
-      "fix http://stackoverflow.com/questions/23090044 or manually install " + agentFile.getAbsoluteFile +
-        " from ~/.ivy2/local/com.github.fommil.lion/agent/1.0-SNAPSHOT/jars/agent-assembly.jar"
+      "WORKAROUND https://github.com/fommil/lions-share/issues/8 with \n" +
+      "           cp ~/.ivy2/local/com.github.fommil.lion/agent/1.0-SNAPSHOT/jars/agent-assembly.jar ."
     )
 
   override val projectSettings = Seq(
@@ -37,7 +35,7 @@ object LionPlugin extends Plugin with StringGzResourceSupport with StringResourc
     lionRuns := 10,
     lionClass := None,
     lionOut := new File("lion-results"),
-    lionAlloc := true,
+    lionAllocRuns := 1,
     lionAllocTrim := Some(10),
     lionAllocRate := 5,
     // defaults are to sample core objects every 10MB
@@ -53,7 +51,8 @@ object LionPlugin extends Plugin with StringGzResourceSupport with StringResourc
       "int",
       "double",
       "char",
-      "byte"
+      "byte",
+      "scala/Some"
     ).map(c => (c, 1048576L)).toMap,
     lion := runLion(
       (fullClasspath in Runtime).value,
@@ -63,7 +62,7 @@ object LionPlugin extends Plugin with StringGzResourceSupport with StringResourc
       (streams in Runtime).value,
       (update in Runtime).value,
       (lionRuns in lion).value,
-      (lionAlloc in lion).value,
+      (lionAllocRuns in lion).value,
       (lionAllocTrim in lion).value,
       (lionAllocRate in lion).value,
       (lionAllocTrace in lion).value,
@@ -90,7 +89,7 @@ object LionPlugin extends Plugin with StringGzResourceSupport with StringResourc
               streams: TaskStreams,
               update: UpdateReport,
               runs: Int,
-              doAlloc: Boolean,
+              allocRuns: Int,
               allocTrim: Option[Int],
               sampleSeconds: Int,
               trace: Map[String, Long],
@@ -105,26 +104,18 @@ object LionPlugin extends Plugin with StringGzResourceSupport with StringResourc
     log.info(s"running the lions-share $runs times for ${main.get}")
     out.mkdirs()
 
-    val jar = agentJar(update)
-    val logs = (1 to runs) map { run =>
-      val gcLog = new File(out, s"gc-$run.log")
-      val allocLog = new File(out, s"alloc-$run.log")
-      val javaOptions = Seq(
-        s"-Xloggc:${gcLog.getAbsolutePath }",
-        "-XX:+PrintGCDetails", "-XX:+PrintGCDateStamps", "-XX:+PrintTenuringDistribution", "-XX:+PrintHeapAtGC"
-      ) ++ (
-        if (!doAlloc) Nil
-        else "-javaagent:" + jar + s"=$allocLog $sampleSeconds " + trace.map{case (c,s) => s"$c:$s"}.mkString(",") :: Nil
+
+    // Non-instrumented runs with GC logging
+    (1 to runs).map { run =>
+      new File(out, s"gc-$run.log") withEffect { gcLog =>
+        val javaOptions = Seq(
+          s"-Xloggc:${gcLog.getAbsolutePath }",
+          "-XX:+PrintGCDetails", "-XX:+PrintGCDateStamps", "-XX:+PrintTenuringDistribution", "-XX:+PrintHeapAtGC"
         ) ++ vmArgs
-      val runner = new ForkRun(ForkOptions(runJVMOptions = javaOptions))
-      // NOTE: constraint is that the user cannot pass extra args
-      toError(runner.run(main.get, data(cp), Nil, log))
-      (gcLog, allocLog)
-    }
-
-    val (gcLogs, allocLogs) = logs.unzip
-
-    gcLogs.map { gcLog =>
+        val runner = new ForkRun(ForkOptions(runJVMOptions = javaOptions))
+        toError(runner.run(main.get, data(cp), Nil, log))
+      }
+    }.map { gcLog =>
       GcParser.parse(fromFile(gcLog)) withEffect { events =>
         log.info(s"parsed ${events.size } garbage collection events")
       }
@@ -133,19 +124,30 @@ object LionPlugin extends Plugin with StringGzResourceSupport with StringResourc
       toFile(new File(out, "gc.html"), fromRes("/com/github/fommil/lion/gc/report.html"))
     }
 
-    allocLogs.map { allocLog =>
-      AllocationParser.parse(fromFile(allocLog)) withEffect { events =>
-        log.info(s"parsed ${events.size} allocation agent events")
+    // Instrumented runs with Allocation Agent
+    val jar = agentJar(update)
+    val traces = (for((c,s) <- trace) yield s"$c:$s").mkString(",")
+    (1 to allocRuns).map { run =>
+      new File(out, s"alloc-$run.log") withEffect { allocLog =>
+        val javaOptions = Seq(
+          s"-javaagent:$jar=$allocLog $sampleSeconds $traces"
+        ) ++ vmArgs
+        val runner = new ForkRun(ForkOptions(runJVMOptions = javaOptions))
+        toError(runner.run(main.get, data(cp), Nil, log))
       }
-    } map {events => events.collect {
-      case a: AllocationSizes if allocTrim.isDefined => a.trim(allocTrim.get)
-      case a => a
-    }
+    }.map { allocLog =>
+      AllocationParser.parse(fromFile(allocLog)) withEffect { events =>
+        log.info(s"parsed ${events.size } allocation agent events")
+      }
+    } map { _.collect {
+        case a: AllocationSizes if allocTrim.isDefined => a.trim(allocTrim.get)
+        case a => a
+      }
     } withEffect { processes =>
       AllocationReporter.allocReport(processes, new File(out, "alloc.js"))
       toFile(new File(out, "alloc.html"), fromRes("/com/github/fommil/lion/alloc/report.html"))
     }
-
+    
     val report = new File(out, "report.html")
     toFile(report, fromRes("/lion-report.html"))
     log.info(s"lions-share report is available at ${report.getAbsolutePath}")

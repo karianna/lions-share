@@ -1,6 +1,7 @@
 package com.github.fommil.lion.agent;
 
 import com.google.common.io.Closeables;
+import com.google.monitoring.runtime.instrumentation.AllocationRecorder;
 import lombok.RequiredArgsConstructor;
 
 import java.io.File;
@@ -24,28 +25,32 @@ public class AllocationPrinter implements Runnable {
 
     @Override
     public synchronized void run() {
-        Date to = new Date();
-        Map<String, List<StackTraceElement[]>> traces = sampler.snapshotTraces();
-        Map<String, Map<Integer, Long>> lengths = sampler.snapshotArrayLengths();
-        Map<String, Long> sizes = sampler.snapshotTotalBytes();
-        sampler.clear();
-
+        AllocationRecorder.recordingAllocation.set(Boolean.TRUE);
         try {
-            Writer writer = null;
+            Date to = new Date();
+            Map<String, List<StackTraceElement[]>> traces = sampler.snapshotTraces();
+            Map<String, Map<Integer, Long>> lengths = sampler.snapshotArrayLengths();
+            Map<String, Long> sizes = sampler.snapshotTotalBytes();
+            sampler.clear();
             try {
-                writer = new FileWriter(out, true);
-                writeSizes(writer, sizes, to);
-                if (!traces.isEmpty())
-                    writeStackTraces(writer, traces, to);
-                if (!lengths.isEmpty())
-                    writeLengths(writer, lengths, to);
-                writer.flush();
-            } finally {
-                from = to;
-                Closeables.close(writer, true);
+                Writer writer = null;
+                try {
+                    writer = new FileWriter(out, true);
+                    writeSizes(writer, sizes, to);
+                    if (!traces.isEmpty())
+                        writeStackTraces(writer, traces, to);
+                    if (!lengths.isEmpty())
+                        writeLengths(writer, lengths, to);
+                    writer.flush();
+                } finally {
+                    from = to;
+                    Closeables.close(writer, true);
+                }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
             }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        } finally {
+            AllocationRecorder.recordingAllocation.set(Boolean.FALSE);
         }
     }
 

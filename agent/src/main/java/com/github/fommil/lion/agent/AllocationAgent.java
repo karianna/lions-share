@@ -29,6 +29,9 @@ public class AllocationAgent {
     public static void premain(String agentArgs, Instrumentation inst) {
         String[] args = agentArgs.split(" ");
 
+        if (System.getProperty("java.version").contains("1.8"))
+            throw new UnsupportedOperationException("Java 8: https://github.com/fommil/lions-share/issues/7");
+
         String filename = args[0];
         File outFile = new File(filename);
         if (outFile.delete())
@@ -58,7 +61,7 @@ public class AllocationAgent {
         final AllocationPrinter printer = new AllocationPrinter(sampler, outFile);
         executor.scheduleWithFixedDelay(printer, period, period, SECONDS);
 
-        Runtime.getRuntime().addShutdownHook(new Thread(){
+        Runtime.getRuntime().addShutdownHook(new Thread() {
             @Override
             public void run() {
                 // tries to get logs on shutdown
