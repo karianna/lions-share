@@ -21,6 +21,13 @@ resolvers ++= Resolver.sonatypeRepo("snapshots")
 addSbtPlugin("com.github.fommil.lion" % "sbt" % "1.0-SNAPSHOT")
 ```
 
+Due to [my lack of sbt foo](https://github.com/fommil/lions-share/issues/8), you'll also need to do the non-standard step of downloading the agent jar
+
+```
+wget https://oss.sonatype.org/content/repositories/snapshots/com/github/fommil/lion/agent/1.0-SNAPSHOT/agent-1.0-SNAPSHOT-assembly.jar -O agent-assembly.jar
+```
+
+
 Then you may run `sbt lion` to get a report using the default settings on your
 project's `mainClass`.
 
