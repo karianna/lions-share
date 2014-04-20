@@ -9,6 +9,9 @@ or as an [sbt](https://github.com/sbt/sbt) plugin to get a report on a `main` cl
 Lion's Share produces HTML reports with interactive Google Charts, e.g.
 [shapeless' `staging.scala` example](http://fommil.github.io/lions-share/shapeless/report.html).
 
+This project is twinned with [Shelmet](https://github.com/rorygraves/shelmet) for heap analysis.
+
+
 ## SBT Plugin
 
 ### Install
@@ -20,11 +23,6 @@ resolvers += Resolver.sonatypeRepo("snapshots")
 
 addSbtPlugin("com.github.fommil.lion" % "sbt" % "1.0-SNAPSHOT")
 ```
-
-```
-wget https://oss.sonatype.org/content/repositories/snapshots/com/github/fommil/lion/agent/1.0-SNAPSHOT/agent-1.0-SNAPSHOT-assembly.jar -O agent-assembly.jar
-```
-
 
 Then you may run `sbt lion` to get a report using the default settings on your
 project's `mainClass`.
