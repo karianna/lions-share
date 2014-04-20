@@ -16,7 +16,7 @@ Lion's Share produces HTML reports with interactive Google Charts, e.g.
 To use the plugin, add the following to your project's `project/plugins.sbt` file:
 
 ```scala
-resolvers ++= Resolver.sonatypeRepo("snapshots")
+resolvers += Resolver.sonatypeRepo("snapshots")
 
 addSbtPlugin("com.github.fommil.lion" % "sbt" % "1.0-SNAPSHOT")
 ```
