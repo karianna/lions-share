@@ -55,7 +55,7 @@ lionAllocTrace := Map.empty[String, Long] // classes and byte sample threshold
 
 There are some examples under the examples module, including:
 
-* demonstration of `Some` creation churn and performance impact.
+* demonstration of `Some` creation churn and performance impact [prompting SI-8519](https://issues.scala-lang.org/browse/SI-8519)
 * shapeless' [`staging.scala`](http://github.com/milessabin/shapeless/blob/master/examples/src/main/scala/shapeless/examples/staging.scala) example which does runtime invocation of `scalac`. [`report.html`](http://fommil.github.io/lions-share/shapeless/report.html)
 
 
