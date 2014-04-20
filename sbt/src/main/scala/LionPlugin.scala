@@ -27,7 +27,7 @@ object LionPlugin extends Plugin with StringGzResourceSupport with StringResourc
   if (!agentFile.isFile)
     throw new FileNotFoundException(
       "WORKAROUND https://github.com/fommil/lions-share/issues/8 with \n" +
-      "           cp ~/.ivy2/local/com.github.fommil.lion/agent/1.0-SNAPSHOT/jars/agent-assembly.jar ."
+      "           wget https://oss.sonatype.org/content/repositories/snapshots/com/github/fommil/lion/agent/1.0-SNAPSHOT/agent-1.0-SNAPSHOT-assembly.jar -O agent-assembly.jar"
     )
 
   override val projectSettings = Seq(
