@@ -21,8 +21,6 @@ resolvers += Resolver.sonatypeRepo("snapshots")
 addSbtPlugin("com.github.fommil.lion" % "sbt" % "1.0-SNAPSHOT")
 ```
 
-Due to [my lack of sbt foo](https://github.com/fommil/lions-share/issues/8), you'll also need to do the non-standard step of downloading the agent jar
-
 ```
 wget https://oss.sonatype.org/content/repositories/snapshots/com/github/fommil/lion/agent/1.0-SNAPSHOT/agent-1.0-SNAPSHOT-assembly.jar -O agent-assembly.jar
 ```
@@ -88,7 +86,6 @@ where
 
 Please check the issue tracker to see if we are already aware of an issue (including a workaround). The biggest issues are;
 
-* [SBT doesn't download the agent automatically](https://github.com/fommil/lions-share/issues/8)
 * [Java 8 is not supported by the allocation agent](https://github.com/fommil/lions-share/issues/7) due to upstream bugs.
 * [Only specific JVMs are supported by the garbage collection log parser](https://github.com/fommil/lions-share/blob/master/analysis/src/main/scala/com/github/fommil/lion/gc/parser.scala#L24), and [G1 is not supported at all](https://github.com/fommil/lions-share/issues/13).
 

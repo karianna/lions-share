@@ -22,16 +22,10 @@ object LionPlugin extends Plugin with StringGzResourceSupport with StringResourc
   val lionAllocTrace = SettingKey[Map[String, Long]]("classes and byte sample threshold")
 
   // https://github.com/sbt/sbt/issues/1260
-  //private val agent = "com.github.fommil.lion" % "agent" % "1.0-SNAPSHOT"
-  private val agentFile = new File("agent-assembly.jar")
-  if (!agentFile.isFile)
-    throw new FileNotFoundException(
-      "WORKAROUND https://github.com/fommil/lions-share/issues/8 with \n" +
-      "           wget https://oss.sonatype.org/content/repositories/snapshots/com/github/fommil/lion/agent/1.0-SNAPSHOT/agent-1.0-SNAPSHOT-assembly.jar -O agent-assembly.jar"
-    )
+  private val agent = "com.github.fommil.lion" % "agent" % "1.0-SNAPSHOT" classifier("assembly") intransitive()
 
   override val projectSettings = Seq(
-//    libraryDependencies += agent,
+    libraryDependencies += agent,
     lionRuns := 10,
     lionClass := None,
     lionOut := new File("lion-results"),
@@ -71,18 +65,17 @@ object LionPlugin extends Plugin with StringGzResourceSupport with StringResourc
     )
   )
 
-  def agentJar(update: UpdateReport): File = agentFile
-//  {
-//    for {
-//      report <- update.configuration("runtime-internal").get.modules
-//      module = report.module
-//      if module.organization == agent.organization
-//      if module.name == agent.name
-//      if module.revision == agent.revision
-//      artifacts <- report.artifacts
-//      file = artifacts._2
-//    } yield file
-//  }.head
+  def agentJar(update: UpdateReport): File = {
+   for {
+     report <- update.configuration("runtime-internal").get.modules
+     module = report.module
+     if module.organization == agent.organization
+     if module.name == agent.name
+     if module.revision == agent.revision
+     artifacts <- report.artifacts
+     file = artifacts._2
+   } yield file
+ }.head
 
   def runLion(cp: Classpath,
               main: Option[String],
