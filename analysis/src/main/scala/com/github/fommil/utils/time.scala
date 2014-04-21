@@ -65,7 +65,7 @@ class TimeIntervalRange private (start: Timestamp, end: Timestamp, s: Long,
 
 object TimeIntervalRange {
   def apply(start: Timestamp, end: Timestamp, step: FiniteDuration): TimeIntervalRange = {
-    require(end > start)
+    require(end >= start)
     val s = step.toMillis
     val length = {
       val diff = end.instant - start.instant
@@ -73,7 +73,6 @@ object TimeIntervalRange {
       val rem = diff % s
       if (rem == 0) div else div + 1
     }
-    require(length > 0)
     new TimeIntervalRange(start, end, s, length.toInt)
   }
 }
